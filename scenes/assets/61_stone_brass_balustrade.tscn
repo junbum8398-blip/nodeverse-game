@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/props/61_stone_brass_balustrade.glb" id="1"]
+
+[node name="61_stone_brass_balustrade" instance=ExtResource("1")]

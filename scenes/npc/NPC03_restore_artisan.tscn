@@ -1,0 +1,38 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://models/npc/merged/NPC03_restore_artisan.scn" id="1"]
+[ext_resource type="Script" path="res://scripts/npc/npc_sd_actor.gd" id="2"]
+[ext_resource type="FontVariation" path="res://fonts/NotoSansKR_Bold.tres" id="3"]
+
+[sub_resource type="CapsuleShape3D" id="body"]
+radius = 0.32
+height = 1.22
+
+[sub_resource type="SphereShape3D" id="talk"]
+radius = 1.4
+
+[node name="NPC03_restore_artisan" instance=ExtResource("1")]
+script = ExtResource("2")
+npc_id = "NPC03_restore_artisan"
+display_name = "복구실 장인"
+
+[node name="Collider" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="Collider"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.610, 0)
+shape = SubResource("body")
+
+[node name="TalkArea" type="Area3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="TalkArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("talk")
+
+[node name="NameTag" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.42, 0)
+billboard = 1
+pixel_size = 0.004
+text = "복구실 장인"
+font = ExtResource("3")
+font_size = 44
+outline_size = 10

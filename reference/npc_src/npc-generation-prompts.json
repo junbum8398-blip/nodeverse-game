@@ -1,0 +1,96 @@
+{
+  "method": "built-in image_gen",
+  "count": 10,
+  "jobs": [
+    {
+      "id": "NPC00_hub_guide",
+      "name": "중앙 광장 안내자",
+      "file": "npc/NPC00_hub_guide.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a friendly middle-aged woman guild guide, short dark chestnut hair with a small teal ribbon, ivory shirt, navy and teal long coat, tan boots, small blue crystal brooch, holding a closed brown guidebook in one hand and welcoming with the other. Wise approachable expression. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC01_array_keeper",
+      "name": "보관소 관리인",
+      "file": "npc/NPC01_array_keeper.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a warm young adult male warehouse keeper, short brown hair, blue work shirt with rolled sleeves, tan leather utility apron, dark trousers, brown boots, a small wooden inventory tag clipped at waist, holding one plain small wooden crate at waist height. Strong readable porter silhouette. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC02_link_engineer",
+      "name": "운송로 정비사",
+      "file": "npc/NPC02_link_engineer.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a friendly young adult woman bridge engineer with tied auburn hair, moss-green work overalls, cream shirt, leather tool belt, brown boots and a small bronze wrench in one hand. Compact safety cap. Distinct bridge-repair occupation, no weapon. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC03_restore_artisan",
+      "name": "복구실 장인",
+      "file": "npc/NPC03_restore_artisan.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: an older male restoration artisan, short gray hair and neat beard, burgundy waistcoat, cream sleeves, dark brown apron, brass monocle-like round spectacles, sturdy boots, holding a small wooden mallet lowered. Calm craftsman. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC04_receptionist",
+      "name": "접수 안내원",
+      "file": "npc/NPC04_receptionist.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a friendly young adult woman receptionist, dark bob hair, navy uniform jacket, pale blue scarf, cream skirt over dark leggings, low brown shoes, holding a plain blank queue-ticket card and gesturing toward an entrance. No writing on ticket. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC05_registry_clerk",
+      "name": "물품대장 기록원",
+      "file": "npc/NPC05_registry_clerk.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a young adult male registry clerk with round spectacles, tidy black hair, mustard yellow cardigan under a brown sleeveless apron, ivory shirt, dark olive trousers, small ring of two bronze keys at belt, closed purple ledger under arm. Attentive expression. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC06_tree_archivist",
+      "name": "계층형 자료실 사서",
+      "file": "npc/NPC06_tree_archivist.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: an older woman archive librarian, gray hair in a neat bun, emerald long dress with cream collar, navy shawl, small gold leaf brooch, simple boots, holding a single closed blue archive folder. Gentle scholarly expression. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC07_bst_warden",
+      "name": "갈림길 창고 길잡이",
+      "file": "npc/NPC07_bst_warden.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a young adult male route warden, short sandy blond hair, olive hooded vest over tan shirt, brown trousers, dark boots, a compass pendant and one folded blank parchment map. Alert confident guide; no bow or weapon. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC08_priority_dispatcher",
+      "name": "긴급 작업 배정관",
+      "file": "npc/NPC08_priority_dispatcher.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a middle-aged woman dispatch supervisor, dark hair in a short ponytail, orange and navy work jacket, pale shirt, fitted navy trousers, brown boots, small brass stopwatch at belt, holding a plain red priority token. Composed decisive expression. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    },
+    {
+      "id": "NPC09_graph_surveyor",
+      "name": "연결망 조사원",
+      "file": "npc/NPC09_graph_surveyor.png",
+      "prompt": "Use case: stylized-concept. Asset type: individual NODEVERSE village NPC concept and game-placement PNG. Reference image1 defines the block-built miniature village world, material finish, palette and proportions. Design ONE ORIGINAL full-body HUMAN resident for that world: a young adult female surveyor with warm brown skin and dark curly hair tied back, teal field jacket, cream shirt, tan cargo trousers, dark boots, compact satchel, holding one rolled map and a small blue survey flag without writing. Curious explorer expression. Friendly stylized adult with head slightly large (approximately one quarter full height), simple expressive face, compact buildable volumes, toy-like sculpted clothing and modest bevels. Match the cozy isometric block diorama, NOT a photorealistic person, flat cartoon, pixel sprite, standard Lego minifigure or robot. Role must read from silhouette and clothes. Three-quarter view looking slightly toward camera-left, full body from hair to soles, natural idle standing pose, feet aligned, clear hands and all accessory parts visible. Even neutral studio illumination with mild shading on the body only. Character centered with ample margin, no cropping, no floor, no cast shadow, no external glow. GENUINELY TRANSPARENT RGBA BACKGROUND. Single character only, no portraits, text, nameplates, UI, backdrop, contact sheet or multiple views. No speech bubbles, no writing on books or props. This is one basic idle design, not a movement sprite sheet.",
+      "refs": [
+        "D:/workspace/mlo-02-p3-team1/Docs/design/connected-island-v1/NODEVERSE_연결섬_전체지도.png"
+      ]
+    }
+  ]
+}

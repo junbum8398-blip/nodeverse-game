@@ -1,0 +1,36 @@
+# Godot generated cache and export credentials
+.godot/
+.import/
+export_credentials.cfg
+
+# Build outputs and generated preview captures
+/build/
+/dist/
+/renders/
+
+# Local editor settings and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files, logs and Python caches
+*.log
+run_log.txt
+*.tmp
+*.temp
+*.bak
+*~
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key

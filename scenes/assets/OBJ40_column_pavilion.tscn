@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/props/OBJ40_column_pavilion.glb" id="1"]
+
+[node name="OBJ40_column_pavilion" instance=ExtResource("1")]

@@ -1,0 +1,424 @@
+{
+  "quizzes": [
+    {
+      "id": "stack_nov_01",
+      "zone": "Stack",
+      "difficulty": "novice",
+      "title": "STACK (스택) - LIFO 후입선출",
+      "question": "웹 브라우저의 '뒤로 가기' 버튼이나 에디터의 '실행 취소(Ctrl+Z)' 기능에 가장 적합한 자료구조는?",
+      "options": [
+        "1. 큐 (Queue)",
+        "2. 스택 (Stack)",
+        "3. 배열 (Array)"
+      ],
+      "correctIndex": 1,
+      "explanation": "가장 최근에 방문한 페이지나 작업이 먼저 나와야 하므로 LIFO(후입선출) 특성을 가진 스택(2번)이 사용됩니다!"
+    },
+    {
+      "id": "stack_nov_02",
+      "zone": "Stack",
+      "difficulty": "novice",
+      "title": "STACK (스택) - 연산 원리",
+      "question": "스택에 데이터 [10, 20, 30]을 순서대로 Push한 후 Pop()을 1회 실행하면 꺼내지는 값은?",
+      "options": [
+        "1. 10 (가장 먼저 들어간 값)",
+        "2. 20 (중간 값)",
+        "3. 30 (가장 마지막에 들어간 값)"
+      ],
+      "correctIndex": 2,
+      "explanation": "가장 마지막에 들어간(Top) 30(3번)이 가장 먼저 나옵니다! (Last In, First Out)"
+    },
+    {
+      "id": "stack_dev_01",
+      "zone": "Stack",
+      "difficulty": "developer",
+      "title": "STACK (스택) - 함수 호출 스택 & 오버플로우",
+      "question": "재귀 함수(Recursive Function)가 종료 조건(Base Case) 없이 무한히 호출될 때 발생하는 런타임 오류는?",
+      "options": [
+        "1. Stack Overflow",
+        "2. Out of Bounds",
+        "3. Segmentation Fault"
+      ],
+      "correctIndex": 0,
+      "explanation": "함수가 호출될 때마다 콜스택 프레임이 쌓이며 정해진 콜스택 메모리 한계를 초과하면 Stack Overflow(1번)가 발생합니다!"
+    },
+    {
+      "id": "stack_arch_01",
+      "zone": "Stack",
+      "difficulty": "architect",
+      "title": "STACK (스택) - 하드웨어 & 캐시 지역성",
+      "question": "OS 커널 및 CPU 아키텍처 관점에서 힙(Heap) 대비 스택(Stack) 메모리 할당이 압도적으로 빠른 이유는?",
+      "options": [
+        "1. 스택 메모리는 하드디스크 스왑 공간을 직접 쓰기 때문",
+        "2. 스택 포인터(RSP) 레지스터의 단순 증감만으로 할당/해제가 단 1 cycle에 끝나기 때문",
+        "3. 스택은 GC(가비지 컬렉터)가 0.1ms 주기로 항상 백그라운드 수거하기 때문"
+      ],
+      "correctIndex": 1,
+      "explanation": "스택 할당은 복잡한 빈 블록 탐색(Free-list) 없이 RSP(스택 포인터) 레지스터 값만 더하거나 빼면 끝나며 CPU L1/L2 캐시 적중률이 극대화됩니다(2번)!"
+    },
+    {
+      "id": "queue_nov_01",
+      "zone": "Queue",
+      "difficulty": "novice",
+      "title": "QUEUE (큐) - FIFO 선입선출",
+      "question": "프린터 인쇄 대기열이나 맛집 번호표 시스템처럼 '먼저 온 요청을 먼저 처리'하는 자료구조는?",
+      "options": [
+        "1. 트리 (Tree)",
+        "2. 스택 (Stack)",
+        "3. 큐 (Queue)"
+      ],
+      "correctIndex": 2,
+      "explanation": "선입선출(FIFO, First In First Out) 방식으로 먼저 대기열에 들어간 작업이 먼저 처리되는 자료구조는 큐(3번)입니다!"
+    },
+    {
+      "id": "queue_nov_02",
+      "zone": "Queue",
+      "difficulty": "novice",
+      "title": "QUEUE (큐) - 기본 연산",
+      "question": "큐에서 데이터를 뒤쪽에 추가하는 연산과 앞쪽에서 꺼내는 연산의 올바른 이름 쌍은?",
+      "options": [
+        "1. Enqueue & Dequeue",
+        "2. Push & Pop",
+        "3. Front & Rear"
+      ],
+      "correctIndex": 0,
+      "explanation": "큐에서는 뒤쪽(Rear)에 추가하는 Enqueue와 앞쪽(Front)에서 꺼내는 Dequeue(1번)를 사용합니다!"
+    },
+    {
+      "id": "queue_dev_01",
+      "zone": "Queue",
+      "difficulty": "developer",
+      "title": "QUEUE (큐) - 원형 큐 (Circular Queue)",
+      "question": "고정 크기 1차원 배열로 일반 큐를 구현할 때 앞쪽 요소 Dequeue 후 발생하는 '가짜 포화' 문제를 해결하는 방식은?",
+      "options": [
+        "1. 요소를 꺼낼 때마다 뒤의 모든 요소를 O(N)으로 앞으로 당긴다",
+        "2. 모듈로 연산(Index % Capacity)을 활용하여 끝과 시작을 잇는 원형 큐(Circular Queue)를 쓴다",
+        "3. 배열의 크기를 매 연산마다 2배로 무한히 재할당한다"
+      ],
+      "correctIndex": 1,
+      "explanation": "인덱스를 나머지 연산((rear + 1) % MAX)으로 순환시키는 원형 큐(2번)를 쓰면 O(1) 시간에 낭비 없는 재활용이 가능합니다!"
+    },
+    {
+      "id": "queue_arch_01",
+      "zone": "Queue",
+      "difficulty": "architect",
+      "title": "QUEUE (큐) - 메시지 브로커 & 비동기 백프레셔",
+      "question": "Kafka, RabbitMQ 등 대규모 분산 아키텍처에서 큐가 감당할 수 없을 정도로 데이터가 급증할 때 시스템 붕괴를 막는 메커니즘은?",
+      "options": [
+        "1. 무조건 모든 요청을 메모리에 끝까지 버퍼링한다",
+        "2. 생산자(Producer)의 송출 속도를 억제하거나 흐름을 제어하는 백프레셔(Backpressure)를 적용한다",
+        "3. 데이터베이스 트랜잭션 타임아웃을 0초로 강제 설정한다"
+      ],
+      "correctIndex": 1,
+      "explanation": "소비자(Consumer)의 처리 속도에 맞춰 생산자에게 배압 신호를 보내 시스템 OOM 붕괴를 방지하는 기법이 백프레셔(2번)입니다!"
+    },
+    {
+      "id": "array_nov_01",
+      "zone": "Array",
+      "difficulty": "novice",
+      "title": "ARRAY (배열) - 시간 복잡도",
+      "question": "배열에서 인덱스 번호(예: arr[3])를 알고 있을 때 해당 요소에 접근하는 시간 복잡도는?",
+      "options": [
+        "1. O(1) - 단번에 즉시 접근",
+        "2. O(N) - 전체 요소를 하나씩 순회",
+        "3. O(log N) - 절반씩 나누어 탐색"
+      ],
+      "correctIndex": 0,
+      "explanation": "배열은 메모리에 연속으로 저장되므로 인덱스 연산으로 단번에 찾아내는 O(1)(1번)입니다!"
+    },
+    {
+      "id": "array_nov_02",
+      "zone": "Array",
+      "difficulty": "novice",
+      "title": "ARRAY (배열) - 인덱싱",
+      "question": "크기가 5인 배열의 인덱스 번호 범위로 올바른 것은? (Zero-based indexing)",
+      "options": [
+        "1. 1 ~ 5",
+        "2. 0 ~ 5",
+        "3. 0 ~ 4"
+      ],
+      "correctIndex": 2,
+      "explanation": "컴퓨터 과학에서 배열 인덱스는 0부터 시작하므로 크기 5인 배열은 0부터 4까지(3번)입니다!"
+    },
+    {
+      "id": "array_dev_01",
+      "zone": "Array",
+      "difficulty": "developer",
+      "title": "ARRAY (동적 배열) - 분할 상환 시간 복잡도",
+      "question": "동적 배열(ArrayList, Vector)이 가득 찼을 때 2배 크기로 확장 후 복사하는 재할당 비용을 고려한 Append의 분할 상환(Amortized) 시간은?",
+      "options": [
+        "1. O(N)",
+        "2. O(1)",
+        "3. O(N^2)"
+      ],
+      "correctIndex": 1,
+      "explanation": "간혹 일어나는 O(N)의 재할당 비용을 $N$번의 삽입에 분산하면 평균 1회당 시간은 분할 상환 O(1)(2번)입니다!"
+    },
+    {
+      "id": "array_arch_01",
+      "zone": "Array",
+      "difficulty": "architect",
+      "title": "ARRAY (배열) - 공간 지역성 (Spatial Locality)",
+      "question": "현대 CPU에서 연결 리스트보다 배열의 전체 순회(Iteration) 속도가 몇 배 이상 압도적으로 빠른 근본 원인은?",
+      "options": [
+        "1. 배열 요소들이 연속된 메모리에 위치하여 CPU 캐시 라인(64바이트) 프리페칭 적중률이 극대화되기 때문",
+        "2. 배열은 컴파일러가 자동으로 모든 요소를 GPU 셰이더로 넘기기 때문",
+        "3. 배열의 요소는 힙 메모리 단편화(Fragmentation)가 원천적으로 불가능하기 때문"
+      ],
+      "correctIndex": 0,
+      "explanation": "연속 메모리 배치는 CPU 하드웨어 프리페처가 캐시 라인(Cache Line) 단위로 고속 적재하므로 캐시 미스(Cache Miss)가 대폭 줄어듭니다(1번)!"
+    },
+    {
+      "id": "list_nov_01",
+      "zone": "List",
+      "difficulty": "novice",
+      "title": "LINKED LIST (연결 리스트) - 구조",
+      "question": "연결 리스트(Linked List)의 각 '노드(Node)'가 반드시 함께 가지고 있어야 하는 두 가지는?",
+      "options": [
+        "1. 인덱스 번호와 전체 배열 길이",
+        "2. 부모 노드와 자식 노드의 키 값",
+        "3. 데이터(Data)와 다음 노드를 가리키는 포인터(Next Pointer)"
+      ],
+      "correctIndex": 2,
+      "explanation": "연결 리스트의 노드는 자신의 데이터 값과 다음 노드의 메모리 주소(포인터)(3번)를 연결 고리로 가집니다!"
+    },
+    {
+      "id": "list_dev_01",
+      "zone": "List",
+      "difficulty": "developer",
+      "title": "LINKED LIST (연결 리스트) - 삽입/삭제",
+      "question": "포인터가 이미 가리키고 있는 위치에 새 노드를 삽입할 때, 배열과 비교한 연결 리스트의 시간 복잡도는?",
+      "options": [
+        "1. O(1) - 포인터 연결선 2개만 변경",
+        "2. O(N) - 뒤의 노드들을 순차 이동",
+        "3. O(log N) - 이진 트리 균형 유지"
+      ],
+      "correctIndex": 0,
+      "explanation": "삽입 위치를 이미 알고 있다면 노드 간의 포인터 주소만 쏙 바꿔주면 되므로 O(1)(1번)에 완료됩니다!"
+    },
+    {
+      "id": "list_arch_01",
+      "zone": "List",
+      "difficulty": "architect",
+      "title": "LINKED LIST (연결 리스트) - 메모리 오버헤드 & 단편화",
+      "question": "임베디드나 초고성능 메모리 환경에서 단순 연결 리스트(Singly Linked List) 사용을 기피하는 주된 이유는?",
+      "options": [
+        "1. 정렬 알고리즘을 전혀 적용할 수 없어서",
+        "2. 각 노드마다 포인터(64비트 시스템 기준 8바이트) 오버헤드와 힙 파편화로 인한 캐시 미스 때문",
+        "3. 가비지 컬렉터가 포인터를 인식하지 못해서"
+      ],
+      "correctIndex": 1,
+      "explanation": "실제 데이터가 4바이트 정수일 때 포인터만 8바이트를 차지해 배보다 배꼽이 커지고, 산재된 힙 주소로 인해 캐시 미스가 심각해집니다(2번)!"
+    },
+    {
+      "id": "sql_nov_01",
+      "zone": "SQL",
+      "difficulty": "novice",
+      "title": "SQL 데이터베이스 - 조건절 (WHERE)",
+      "question": "학생(Student) 테이블에서 나이가 20세 이상인 행(Row)만 필터링하여 조회할 때 사용하는 SQL 구문은?",
+      "options": [
+        "1. WHERE age >= 20",
+        "2. GROUP BY age >= 20",
+        "3. ORDER BY age >= 20"
+      ],
+      "correctIndex": 0,
+      "explanation": "테이블에서 특정 조건을 만족하는 데이터를 필터링할 때는 WHERE 절(1번)을 사용합니다!"
+    },
+    {
+      "id": "sql_dev_01",
+      "zone": "SQL",
+      "difficulty": "developer",
+      "title": "SQL 데이터베이스 - 테이블 결합 (JOIN)",
+      "question": "주문(Orders) 테이블과 고객(Customer) 테이블을 고객ID(FK)로 연결하여 공통 매칭되는 결과만 조회하는 연산은?",
+      "options": [
+        "1. INNER JOIN",
+        "2. FULL OUTER JOIN",
+        "3. CROSS JOIN"
+      ],
+      "correctIndex": 0,
+      "explanation": "두 테이블 간의 일치하는 공통 키를 가진 교집합 데이터만 조회하는 가장 보편적인 결합은 INNER JOIN(1번)입니다!"
+    },
+    {
+      "id": "sql_arch_01",
+      "zone": "SQL",
+      "difficulty": "architect",
+      "title": "SQL 데이터베이스 - B+Tree 인덱싱 & 커버링 인덱스",
+      "question": "RDBMS에서 B+Tree 인덱스를 탈 때, 실제 데이터 블록(테이블)을 아예 읽지 않고 인덱스만으로 SELECT 쿼리를 완료하는 최적화 기법은?",
+      "options": [
+        "1. 풀 테이블 스캔 (Full Table Scan)",
+        "2. 커버링 인덱스 (Covering Index)",
+        "3. 해시 조인 (Hash Join)"
+      ],
+      "correctIndex": 1,
+      "explanation": "SELECT절과 WHERE절에 필요한 모든 컬럼이 인덱스 리프 노드에 이미 포함되어 테이블 랜덤 I/O를 0으로 줄이는 기법이 커버링 인덱스(2번)입니다!"
+    },
+    {
+      "id": "algo_nov_01",
+      "zone": "ALGO",
+      "difficulty": "novice",
+      "title": "알고리즘 - 정렬 (Bubble Sort)",
+      "question": "인접한 두 요소를 비교하여 큰 값을 뒤로 보내며 정렬하는 직관적인 O(N^2) 기초 정렬 알고리즘은?",
+      "options": [
+        "1. 버블 정렬 (Bubble Sort)",
+        "2. 퀵 정렬 (Quick Sort)",
+        "3. 병합 정렬 (Merge Sort)"
+      ],
+      "correctIndex": 0,
+      "explanation": "거품이 수면으로 떠오르듯 인접 원소를 연속으로 교환하는 기초 정렬은 버블 정렬(1번)입니다!"
+    },
+    {
+      "id": "algo_dev_01",
+      "zone": "ALGO",
+      "difficulty": "developer",
+      "title": "알고리즘 - 너비 우선 탐색 (BFS) vs DFS",
+      "question": "가중치가 없는 최단 경로 탐색에서 큐(Queue)를 사용하여 레벨 단위로 확장하는 탐색 알고리즘은?",
+      "options": [
+        "1. DFS (깊이 우선 탐색)",
+        "2. BFS (너비 우선 탐색)",
+        "3. 이진 탐색 (Binary Search)"
+      ],
+      "correctIndex": 1,
+      "explanation": "시작점에서 가까운 정점부터 큐에 넣고 순서대로 방문하여 최단 거리를 보장하는 알고리즘은 BFS(2번)입니다!"
+    },
+    {
+      "id": "algo_arch_01",
+      "zone": "ALGO",
+      "difficulty": "architect",
+      "title": "알고리즘 - A* 길찾기 & 휴리스틱 최적화",
+      "question": "대규모 게임 맵이나 내비게이션에서 다익스트라(Dijkstra) 대비 A* 알고리즘이 탐색 노드 수를 획기적으로 줄이는 원리는?",
+      "options": [
+        "1. 목표 지점까지의 추정 거리 휴리스틱 함수 h(n)을 평가 함수 f(n) = g(n) + h(n)에 결합하여 방향성 유도를 하기 때문",
+        "2. 맵 전체를 무작위로 셔플하여 연산하기 때문",
+        "3. 그래프 간선의 모든 가중치를 0으로 단순화하기 때문"
+      ],
+      "correctIndex": 0,
+      "explanation": "시작부터의 비용 g(n)과 목표까지의 예상 비용 h(n)을 합산하여 목표 방향으로 우선 탐색하므로 불필요한 전방위 확산이 방지됩니다(1번)!"
+    },
+    {
+      "id": "intro_nov_01",
+      "zone": "Intro",
+      "difficulty": "novice",
+      "title": "입문 - 변수(Variable)와 데이터 저장",
+      "question": "프로그래밍에서 값을 담아두고 나중에 꺼내 쓰거나 변경할 수 있는 '이름표가 붙은 상자'는?",
+      "options": [
+        "1. 루프 (Loop)",
+        "2. 변수 (Variable)",
+        "3. 컴파일러 (Compiler)"
+      ],
+      "correctIndex": 1,
+      "explanation": "변수(Variable)는 데이터를 저장하고 재사용할 수 있도록 메모리 공간에 이름을 붙인 상자입니다."
+    },
+    {
+      "id": "intro_dev_01",
+      "zone": "Intro",
+      "difficulty": "developer",
+      "title": "입문 - 조건 분기(Branching) & 제어 흐름",
+      "question": "조건식 if-else에서 여러 조건을 차례대로 검사하다가 최초로 참(True)인 블록 하나만 실행하고 탈출하는 구조는?",
+      "options": [
+        "1. if - else if (elif) - else",
+        "2. while (true) loop",
+        "3. recursion without base"
+      ],
+      "correctIndex": 0,
+      "explanation": "elif(else if) 체인은 위에서부터 조건을 평가하여 가장 먼저 참이 되는 블록 하나만 실행 후 전체 구문을 종료합니다."
+    },
+    {
+      "id": "intro_arch_01",
+      "zone": "Intro",
+      "difficulty": "architect",
+      "title": "입문 - 정적 타입(Static Type) vs 동적 타입(Dynamic Type)",
+      "question": "Rust나 C++, TypeScript 등 정적 타입 언어가 런타임 성능 및 대규모 협업에서 유리한 근본적 이유는?",
+      "options": [
+        "1. 컴파일 타임에 타입 불일치를 검증하고 메모리 레이아웃을 고정하여 불필요한 런타임 타입 태그 검사를 제거하기 때문",
+        "2. 모든 코드를 무조건 인터프리터로 실시간 번역하기 때문",
+        "3. 힙 메모리를 전혀 사용하지 못하도록 원천 차단하기 때문"
+      ],
+      "correctIndex": 0,
+      "explanation": "정적 타이핑은 컴파일 시점에 객체 크기와 필드 오프셋을 확정하여 런타임 오버헤드를 없애고 안정적인 최적화를 가능케 합니다."
+    },
+    {
+      "id": "data_nov_01",
+      "zone": "Data",
+      "difficulty": "novice",
+      "title": "데이터 탐험 - 히스토그램 (Histogram)",
+      "question": "연속형 수치 데이터의 분포를 구간(Bin)별 빈도수로 나타내어 데이터의 치우침을 한눈에 파악하는 시각화 도구는?",
+      "options": [
+        "1. 원 그래프 (Pie Chart)",
+        "2. 히스토그램 (Histogram)",
+        "3. 워드 클라우드 (Word Cloud)"
+      ],
+      "correctIndex": 1,
+      "explanation": "히스토그램은 데이터를 일정한 계급(구간)으로 나누고 각 구간의 빈도를 막대로 표현하여 데이터 분포를 시각화합니다."
+    },
+    {
+      "id": "data_dev_01",
+      "zone": "Data",
+      "difficulty": "developer",
+      "title": "데이터 탐험 - 상관관계(Correlation) vs 인과관계(Causation)",
+      "question": "두 변수 A와 B의 피어슨 상관계수가 0.92로 높게 측정되었을 때 올바른 통계적 해석은?",
+      "options": [
+        "1. A가 원인이고 B가 그에 따른 결과임이 명백하다",
+        "2. 두 변수 간 강한 양의 선형 관계가 존재하나, 인과관계는 추가 실험과 도메인 검증이 필요하다",
+        "3. 두 변수는 완전히 독립적이며 상관이 없다"
+      ],
+      "correctIndex": 1,
+      "explanation": "상관관계는 두 변수가 함께 움직이는 경향성만을 보여줄 뿐, 원인과 결과를 직접적으로 입증하지 않습니다."
+    },
+    {
+      "id": "data_arch_01",
+      "zone": "Data",
+      "difficulty": "architect",
+      "title": "데이터 탐험 - 고차원 데이터 차원 축소 (PCA & t-SNE)",
+      "question": "수백 개의 고차원 피처 데이터를 정보 손실을 최소화하면서 주축(Principal Axis) 방향 분산을 보존해 2D/3D로 압축하는 기법은?",
+      "options": [
+        "1. 주성분 분석 (PCA - Principal Component Analysis)",
+        "2. 완전 탐색 (Brute Force)",
+        "3. 단일 스레드 정렬 (QuickSort)"
+      ],
+      "correctIndex": 0,
+      "explanation": "PCA는 공분산 행렬의 고유벡터(Eigenvector)를 구해 데이터 분산이 가장 큰 축으로 직교 투영하여 차원을 축소합니다."
+    },
+    {
+      "id": "chal_nov_01",
+      "zone": "Challenge",
+      "difficulty": "novice",
+      "title": "종합 도전 - 컴퓨터 과학 핵심 기본기",
+      "question": "컴퓨터 과학에서 문제를 해결하기 위한 명확하고 순서화된 유한한 단계적 절차를 무엇이라 하는가?",
+      "options": [
+        "1. 알고리즘 (Algorithm)",
+        "2. 하드웨어 (Hardware)",
+        "3. 랜섬웨어 (Ransomware)"
+      ],
+      "correctIndex": 0,
+      "explanation": "알고리즘은 주어진 입력으로부터 원하는 결과를 도출하기 위한 명확한 규칙과 절차의 모음입니다."
+    },
+    {
+      "id": "chal_dev_01",
+      "zone": "Challenge",
+      "difficulty": "developer",
+      "title": "종합 도전 - 시스템 아키텍처 풀스택 캐싱 전략",
+      "question": "대규모 트래픽 발생 시 관계형 DB(RDBMS)의 부하를 줄이기 위해 In-Memory 캐시(Redis)를 앞단에 두는 Look-Aside 캐싱 흐름은?",
+      "options": [
+        "1. 요청 시 캐시를 먼저 확인 -> 캐시 미스 시 DB 조회 후 결과를 캐시에 적재 -> 반환",
+        "2. 무조건 DB에만 쓰고 캐시는 매일 자정에만 비동기 백업",
+        "3. 모든 데이터를 클라이언트 브라우저 로컬 스토리지에만 저장"
+      ],
+      "correctIndex": 0,
+      "explanation": "Cache-Aside(Look-Aside) 패턴은 애플리케이션이 캐시를 먼저 조회하고, 없을 때 DB에서 읽어와 캐시를 갱신합니다."
+    },
+    {
+      "id": "chal_arch_01",
+      "zone": "Challenge",
+      "difficulty": "architect",
+      "title": "종합 도전 - 분산 시스템 CAP 정리 & 궁극적 일관성",
+      "question": "네트워크 분할(Partition Tolerance)이 필연적인 분산 환경에서 가용성(Availability)과 궁극적 일관성(Eventual Consistency)을 취하는 아키텍처는?",
+      "options": [
+        "1. AP 시스템 (예: Cassandra, DynamoDB) 및 CQRS/이벤트 기반 아키텍처",
+        "2. 단일 인스턴스 전역 잠금(Global Lock) 블로킹 시스템",
+        "3. 동기식 분산 2PC(Two-Phase Commit) 무한 대기 시스템"
+      ],
+      "correctIndex": 0,
+      "explanation": "CAP 정리에 따라 네트워크 분할 시 C와 A 중 하나를 절충해야 하며, 대규모 분산 웹 서비스는 AP 모델과 궁극적 일관성을 택합니다."
+    }
+  ]
+}
