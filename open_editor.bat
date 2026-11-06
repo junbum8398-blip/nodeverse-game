@@ -15,5 +15,7 @@ if not defined GODOT_EXE (
     exit /b 1
 )
 
-echo Opening NODEVERSE 3D Project in Godot 4.7 Editor...
-start "" "%GODOT_EXE%" --editor --path "%CD%" "res://scenes/AssetShowcase.tscn"
+if not exist "%CD%\.godot" mkdir "%CD%\.godot"
+
+echo Opening NODEVERSE game world in Godot 4.7 Editor...
+start "" "%GODOT_EXE%" --editor --path "%CD%" --log-file "%CD%\.godot\editor-launch.log" "res://scenes/NodeverseWorld.tscn"

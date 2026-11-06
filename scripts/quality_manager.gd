@@ -160,10 +160,10 @@ func _find_sun() -> DirectionalLight3D:
 	var world := get_parent()
 	if world == null:
 		return null
-	for n in world.get_children():
+	for n in world.find_children("*", "DirectionalLight3D", true, false):
 		if n is DirectionalLight3D and (n as DirectionalLight3D).shadow_enabled:
 			return n
-	for n in world.get_children():
+	for n in world.find_children("*", "DirectionalLight3D", true, false):
 		if n is DirectionalLight3D:
 			return n
 	return null

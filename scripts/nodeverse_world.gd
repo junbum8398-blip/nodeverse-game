@@ -10,6 +10,7 @@ const BuilderComputer = preload("res://scripts/builders/builder_computer.gd")
 const StaticBatcher = preload("res://scripts/static_batcher.gd")
 const PlayerRobot = preload("res://scripts/player_robot.gd")
 const AuthManager = preload("res://scripts/auth_manager.gd")
+const BasicsGuide = preload("res://scripts/basics_guide.gd")
 
 const ASSET_DIR: String = "res://scenes/assets/"
 const WATER_Y: float = 0.05
@@ -43,10 +44,13 @@ var _scene_cache: Dictionary = {}
 # Computer Terminals (2D Mini-Game)
 var computer_terminals: Array[Node3D] = []
 var computer_positions: Array[Vector3] = [
-	Vector3(-12.4, TOP, -1.2),  # 자료구조 섬 진입로
-	Vector3(3.2, TOP, 4.4)      # 메인 섬 마을 광장
+	Vector3(-12.4, TOP, -1.2)  # 자료구조 섬 진입로
 ]
 const COMPUTER_INTERACT_DIST: float = 3.2
+var _basics_board: Node3D
+var _basics_guide: Control
+var _basics_completed := false
+const BOARD_INTERACT_DIST := 2.6
 
 # NPCs (10 Characters)
 var spawned_npcs: Array[Node3D] = []
@@ -339,7 +343,55 @@ var _loading_layer: CanvasLayer
 var _loading_bar: ProgressBar
 var _loading_lbl: Label
 
+# Saved map nodes are the source of truth; procedural generation remains a fallback.
+@export_storage var authored_map: bool = false
+@export_storage var authored_data: Dictionary = {}
+@export_storage var island_offsets: Dictionary = {}
+var map_export_mode: bool = false
+
+func _island_offset(key: String) -> Vector3:
+	return island_offsets.get(key, Vector3.ZERO) if authored_map else Vector3.ZERO
+
+func _island_center(key: String) -> Vector2:
+	var offset := _island_offset(key)
+	return (ISLANDS[key]["center"] as Vector2) + Vector2(offset.x, offset.z)
+
+func _island_spawn(key: String) -> Vector3:
+	var center := _island_center(key)
+	return Vector3(center.x, TOP + 0.1, center.y)
+
+func _restore_authored_map() -> void:
+	for key in authored_data:
+		set(key, str_to_var(authored_data[key]))
+	var collections := {}
+	for n in find_children("*", "", true, false):
+		var bindings: Dictionary = n.get_meta("world_bindings", {})
+		for key in bindings:
+			var slot: int = bindings[key]
+			if slot < 0:
+				set(key, n)
+			else:
+				if not collections.has(key): collections[key] = []
+				collections[key].append([slot, n])
+	for key in collections:
+		var entries: Array = collections[key]
+		entries.sort_custom(func(a, b): return a[0] < b[0])
+		var target: Array = get(key)
+		target.clear()
+		for entry in entries: target.append(entry[1])
+	# Detect added, duplicated, moved or deleted NPCs/terminals from the saved tree.
+	spawned_npcs.clear()
+	computer_terminals.clear()
+	computer_positions.clear()
+	for n in find_children("*", "Node3D", true, false):
+		if n.has_meta("npc_id"): spawned_npcs.append(n)
+		if n.get_meta("world_terminal", false):
+			computer_terminals.append(n)
+			computer_positions.append(n.global_position)
+
 func _ready() -> void:
+	if map_export_mode:
+		return
 	# 그래픽 품질 관리자: 월드를 만들기 전에 최적화 단계(1~3차)를 정해야 하므로 가장 먼저 생성
 	quality = QualityManager.new()
 	quality.name = "QualityManager"
@@ -403,9 +455,14 @@ func _build_world_async() -> void:
 	await get_tree().process_frame
 	BAKE_SCENE = "user://world_bake_L%d.scn" % quality.built_level
 	BAKE_META = "user://world_bake_L%d.json" % quality.built_level
-	var hash := _bake_hash()
-	var baked := await _try_load_bake(hash)
-	if baked:
+	var hash := "" if authored_map else _bake_hash()
+	var baked := false
+	if authored_map:
+		_restore_authored_map()
+		_build_player()
+		_optimize()
+	elif await _try_load_bake(hash):
+		baked = true
 		timing.append("baked_load=%dms" % (Time.get_ticks_msec() - t0))
 		_build_player()
 	else:
@@ -434,6 +491,8 @@ func _build_world_async() -> void:
 		var tsv := Time.get_ticks_usec()
 		_save_bake(hash)
 		timing.append("bake_save=%dms" % ((Time.get_ticks_usec() - tsv) / 1000))
+	_configure_basics_board()
+	_align_queue_crates()
 	for npc in spawned_npcs:
 		npc.set("look_at_target", player)
 	_load_quiz_data()
@@ -449,6 +508,8 @@ func _build_world_async() -> void:
 		var mk := t.get_node_or_null("EnterMarker") as Node3D
 		if mk != null:
 			_animate_marker(mk)
+	if is_instance_valid(_basics_board):
+		_animate_marker(_basics_board.get_node("EnterMarker"))
 	_set_game_state(GameState.TITLE_LOGIN)
 	_loading_layer.queue_free()
 	is_built = true
@@ -623,7 +684,8 @@ func _try_load_bake(hash: String) -> bool:
 # ============================================================================
 
 func _optimize() -> void:
-	var exclude: Array = [player, stack_tower, array_crane, orb, sort_node]
+	_configure_basics_board()
+	var exclude: Array = [player, stack_tower, array_crane, orb, sort_node, _basics_board]
 	exclude.append_array(array_tiles)
 	exclude.append_array(queue_crates)
 	exclude.append_array(spawned_npcs)
@@ -1308,15 +1370,22 @@ func _make_enter_marker() -> Node3D:
 	return root
 
 func _animate_marker(root: Node3D) -> void:
+	var base_y := root.position.y
 	var tw := root.create_tween().set_loops()
-	tw.tween_property(root, "position:y", 1.95, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(root, "position:y", 1.75, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(root, "position:y", base_y + 0.2, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(root, "position:y", base_y, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	var spin := root.create_tween().set_loops()
 	spin.tween_property(root, "rotation:y", TAU, 3.0).from(0.0)
 
 func _open_computer_game() -> void:
 	if _zoom_busy:
 		return
+	var terminal := _nearest_terminal()
+	if is_instance_valid(terminal):
+		var quiz_zone: String = terminal.get_meta("quiz_zone", "")
+		if not quiz_zone.is_empty():
+			_open_quiz_for_zone(quiz_zone)
+			return
 	_zoom_busy = true
 	if player != null:
 		saved_player_pos = player.global_position
@@ -1591,7 +1660,10 @@ func _build_orb() -> void:
 	add_child(orb)
 
 func _build_player() -> void:
-	var spawn := Vector3(0.0, TOP + 1.0, 4.4)
+	var spawn := Vector3(0.0, 1.08, 12.15)
+	var spawn_marker := find_child("PlayerSpawn", true, false) as Marker3D
+	if spawn_marker != null:
+		spawn = spawn_marker.global_position
 	player = PlayerRobot.new()
 	player.name = "Robot"
 	add_child(player)
@@ -1601,6 +1673,20 @@ func _build_player() -> void:
 	player.connect("interact_pressed", Callable(self, "_on_interact"))
 	player.connect("secondary_pressed", Callable(self, "_on_secondary"))
 	player.connect("fell_in_water", Callable(self, "_on_fell"))
+
+func _safe_saved_player_position(position: Vector3) -> bool:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.27
+	capsule.height = 1.08
+	query.shape = capsule
+	query.transform = Transform3D(Basis.IDENTITY, position + Vector3(0, 0.58, 0))
+	query.exclude = [player.get_rid()]
+	var space := get_world_3d().direct_space_state
+	if not space.intersect_shape(query).is_empty(): return false
+	var ray := PhysicsRayQueryParameters3D.create(position + Vector3(0, 0.15, 0), position - Vector3(0, 1.5, 0))
+	ray.exclude = [player.get_rid()]
+	return not space.intersect_ray(ray).is_empty()
 
 
 # ============================================================================
@@ -1625,6 +1711,41 @@ func _build_hud() -> void:
 	_build_pause_modal(ui_canvas)
 	_build_quiz_modal(ui_canvas)
 	_build_npc_dialog(ui_canvas)
+	_basics_guide = BasicsGuide.new()
+	_basics_guide.name = "BasicsGuide"
+	ui_canvas.add_child(_basics_guide)
+	_basics_guide.closed.connect(_on_basics_closed)
+
+func _configure_basics_board() -> void:
+	if not is_instance_valid(_basics_board):
+		for node in find_children("*", "Node3D", true, false):
+			if node.get_meta("world_basics_board", false) or node.name == "OBJ04_quest_board":
+				_basics_board = node
+				break
+	if is_instance_valid(_basics_board) and not _basics_board.has_node("EnterMarker"):
+		var marker := _make_enter_marker()
+		marker.position = Vector3(0, 2.15, 0)
+		_basics_board.add_child(marker)
+
+func _basics_open() -> bool:
+	return is_instance_valid(_basics_guide) and _basics_guide.visible
+
+func _near_basics_board() -> bool:
+	return is_instance_valid(_basics_board) and player != null and player.global_position.distance_to(_basics_board.global_position) < BOARD_INTERACT_DIST
+
+func _open_basics_board() -> void:
+	if _basics_guide == null: return
+	player.velocity = Vector3.ZERO
+	player.can_move = false
+	prompt_label.visible = false
+	_basics_guide.open()
+
+func _on_basics_closed(completed: bool) -> void:
+	_basics_completed = _basics_completed or completed
+	if player != null:
+		player.can_move = game_state == GameState.PLAYING and not is_quiz_open
+	if completed:
+		_show_msg("📖 기본 안내를 마쳤습니다! 입문 섬에서 탐험을 시작해 보세요.", 4.0)
 
 func _build_ingame_hud(canvas: CanvasLayer) -> void:
 	var vb := VBoxContainer.new()
@@ -1732,7 +1853,7 @@ func _sync_hud_bubbles() -> void:
 	for l in [zone_label, msg_label, prompt_label]:
 		if l != null:
 			(l as Label).visible = (l as Label).text.strip_edges() != ""
-	if npc_dialog_open():
+	if npc_dialog_open() or _basics_open():
 		if prompt_label != null: prompt_label.visible = false
 		if help_label != null: help_label.modulate.a = 0.0
 	elif help_label != null:
@@ -2826,7 +2947,8 @@ func _on_continue_game() -> void:
 	quiz_score = int(user_save_data.get("score", 0))
 	var ppos: Variant = user_save_data.get("player_pos", null)
 	if ppos is Array and ppos.size() >= 3:
-		player.teleport_to(Vector3(float(ppos[0]), float(ppos[1]), float(ppos[2])))
+		var saved_position := Vector3(float(ppos[0]), float(ppos[1]), float(ppos[2]))
+		player.teleport_to(saved_position if _safe_saved_player_position(saved_position) else player.spawn_point)
 	_set_game_state(GameState.PLAYING)
 	_show_msg("🚀 이전 저장 상태에서 여정을 이어갑니다! (난이도: %s, 점수: %d점)" % [current_difficulty, quiz_score], 3.0)
 
@@ -3180,6 +3302,20 @@ func _on_quiz_option_selected(opt_idx: int) -> void:
 # ============================================================================
 
 func _zone_of(p: Vector3) -> String:
+	if authored_map:
+		var cell := Vector2i(floori(p.x), floori(p.z))
+		for key in island_cells:
+			if (island_cells[key] as Dictionary).has(cell): return key
+		var nearest := "MAIN"
+		var distance := INF
+		for key in ISLANDS:
+			var center := _island_center(key)
+			var radius := Vector2(ISLANDS[key]["rx"], ISLANDS[key]["rz"])
+			var score := ((Vector2(p.x, p.z) - center) / radius).length_squared()
+			if score < distance:
+				distance = score
+				nearest = key
+		return nearest
 	if p.z > 11.0 and p.x < -8.0:
 		return "INTRO"
 	elif p.z < -24.0:
@@ -3195,6 +3331,8 @@ func _zone_of(p: Vector3) -> String:
 	return "MAIN"
 
 func _process(delta: float) -> void:
+	if not is_built:
+		return
 	_sync_hud_bubbles()
 	if quality != null:
 		quality.active = game_state == GameState.PLAYING
@@ -3219,7 +3357,10 @@ func _process(delta: float) -> void:
 
 		var wa: Dictionary = TOUR_WAYPOINTS[s_idx]
 		var wb: Dictionary = TOUR_WAYPOINTS[n_idx]
-		var target_focus: Vector3 = wa["focus"].lerp(wb["focus"], smooth_t)
+		var tour_islands := ["MAIN", "INTRO", "DS", "ALGO", "CHALLENGE", "DATA", "SQL"]
+		var focus_a: Vector3 = wa["focus"] + _island_offset(tour_islands[s_idx])
+		var focus_b: Vector3 = wb["focus"] + _island_offset(tour_islands[n_idx])
+		var target_focus: Vector3 = focus_a.lerp(focus_b, smooth_t)
 		var target_dist: float = lerpf(wa["dist"], wb["dist"], smooth_t)
 		var target_pitch: float = lerpf(wa["pitch"], wb["pitch"], smooth_t)
 		var target_yaw: float = rad_to_deg(lerp_angle(deg_to_rad(wa["yaw"]), deg_to_rad(wb["yaw"]), smooth_t))
@@ -3280,8 +3421,13 @@ func _process(delta: float) -> void:
 			near_comp = true
 			break
 
-	if near_comp:
-		prompt_label.text = "💻 [E] 컴퓨터 터미널 접속  ➜  자료구조 2D 미니게임 시작!"
+	if _near_basics_board():
+		prompt_label.text = "📖 [E] 게시판 읽기  ➜  기본 조작·학습 안내" + (" · 확인 완료" if _basics_completed else "")
+		prompt_label.modulate = Color(1.0, 0.95, 0.35)
+	elif near_comp:
+		var terminal := _nearest_terminal()
+		var topic: String = terminal.get_meta("learning_title", "자료구조 2D 미니게임")
+		prompt_label.text = "💻 [E] 컴퓨터 접속  ➜  " + topic
 		prompt_label.modulate = Color(1.0, 0.95, 0.35)
 	elif active_npc != null:
 		prompt_label.text = "💬 [E] 대화하기: %s" % active_npc.get_meta("npc_name", "NPC")
@@ -3295,13 +3441,24 @@ func _process(delta: float) -> void:
 			msg_label.text = ""
 
 	# Queue crates movement
+	var lane := _queue_lane()
+	var lane_axis := (lane[1] - lane[0]).normalized()
+	var lane_length := lane[0].distance_to(lane[1])
 	for cr in queue_crates:
 		if is_instance_valid(cr):
-			cr.position.x += delta * 0.65
-			if cr.position.x > QUEUE_END_X:
-				cr.position.x = QUEUE_START_X
+			cr.global_position += lane_axis * delta * 0.65
+			var progress := (cr.global_position - lane[0]).dot(lane_axis)
+			if progress > lane_length: progress = 0.0
+			var aligned := lane[0] + lane_axis * clampf(progress, 0.0, lane_length)
+			aligned.y = _queue_support_height(aligned)
+			cr.global_position = aligned
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _basics_open():
+		if Engine.get_process_frames() != _last_interact_frame:
+			_basics_guide.handle_key(event)
+		get_viewport().set_input_as_handled()
+		return
 	if npc_dialog_open():
 		if event is InputEventKey and event.pressed and not event.echo:
 			match (event as InputEventKey).keycode:
@@ -3343,19 +3500,19 @@ func _unhandled_input(event: InputEvent) -> void:
 					if is_quiz_open: _close_quiz()
 					else: _open_quiz_for_zone(_zone_name)
 				elif ek.keycode == KEY_1:
-					player.teleport_to(Vector3(0.0, TOP + 0.1, 4.4))
-					_show_msg("🏰 메인 섬 광장으로 이동했습니다", 2.0)
+					player.teleport_to(player.spawn_point)
+					_show_msg("⚓ 메인 섬 부두로 이동했습니다", 2.0)
 				elif ek.keycode == KEY_2:
 					player.teleport_to(Vector3(-15.5, TOP + 0.1, 0.0))
 					_show_msg("📦 자료구조 섬으로 이동했습니다", 2.0)
 				elif ek.keycode == KEY_3:
-					player.teleport_to(Vector3(15.5, TOP + 0.1, 0.0))
+					player.teleport_to(_island_spawn("SQL"))
 					_show_msg("🏛️ SQL 섬으로 이동했습니다", 2.0)
 				elif ek.keycode == KEY_4:
 					player.teleport_to(Vector3(0.0, TOP + 0.1, -14.0))
 					_show_msg("⚡ 알고리즘 섬으로 이동했습니다", 2.0)
 				elif ek.keycode == KEY_5:
-					player.teleport_to(Vector3(-17.5, TOP + 0.1, 17.5))
+					player.teleport_to(_island_spawn("INTRO"))
 					_show_msg("📖 입문 섬으로 이동했습니다", 2.0)
 				elif ek.keycode == KEY_6:
 					player.teleport_to(Vector3(23.0, TOP + 0.1, -17.5))
@@ -3370,7 +3527,7 @@ func _unhandled_input(event: InputEvent) -> void:
 # ============================================================================
 
 func _on_interact() -> void:
-	if player == null:
+	if player == null or _basics_open() or is_quiz_open or game_state != GameState.PLAYING:
 		return
 	# E 키가 로봇 신호와 월드 입력 양쪽에서 들어오므로 같은 프레임 중복 실행 방지
 	if Engine.get_process_frames() == _last_interact_frame:
@@ -3380,6 +3537,9 @@ func _on_interact() -> void:
 		_advance_npc_dialog()
 		return
 	var pp: Vector3 = player.global_position
+	if _near_basics_board():
+		_open_basics_board()
+		return
 
 	# 1. 컴퓨터 터미널 (2D 미니게임)
 	for cp: Vector3 in computer_positions:
@@ -3417,6 +3577,7 @@ func _on_interact() -> void:
 			_algo_sort_step()
 
 func _on_secondary() -> void:
+	if _basics_open(): return
 	match _zone_name:
 		"DS":
 			_stack_pop()
@@ -3426,7 +3587,8 @@ func _on_secondary() -> void:
 
 func _refresh_array_labels(active: int) -> void:
 	for i in range(array_labels.size()):
-		array_labels[i].text = "arr[%d] = %d" % [i, array_values[i]]
+		var slot: int = array_labels[i].get_meta("array_index", i)
+		array_labels[i].text = "arr[%d] = %d" % [slot, array_values[slot]]
 		array_labels[i].modulate = Color(1.0, 0.9, 0.3) if i == active else Color(1.0, 1.0, 1.0, 0.85)
 
 func _array_swap() -> void:
@@ -3447,6 +3609,8 @@ func _update_stack_label() -> void:
 		stack_label.text = "STACK  size = %d / %d" % [stack_crates.size(), STACK_CAP]
 
 func _stack_push() -> void:
+	if not is_instance_valid(stack_tower):
+		return
 	if stack_crates.size() >= STACK_CAP:
 		_show_msg("Stack Overflow! (Q: Pop)", 2.0)
 		return
@@ -3473,10 +3637,49 @@ func _queue_enqueue(announce: bool = true) -> void:
 	if queue_crates.size() >= QUEUE_CAP:
 		if announce: _show_msg("Queue Full!", 2.0)
 		return
-	var cr: Node3D = _spawn("10_crate_gold_top", Vector3(QUEUE_START_X, TOP + 0.24, QUEUE_Z), 0.0, 0.7)
+	var cr: Node3D = _spawn("10_crate_gold_top", _queue_lane()[0], 0.0, 0.7)
 	queue_crates.append(cr)
 	if announce: _show_msg("ENQUEUE ➜ 큐 뒤쪽에 추가 (FIFO, size %d)" % queue_crates.size(), 2.0)
 	_update_queue_label()
+
+func _queue_lane() -> PackedVector3Array:
+	var first := find_child("43_conveyor_arrow_up", true, false) as Node3D
+	var last := find_child("44_conveyor_arrow_down_a", true, false) as Node3D
+	if first != null and last != null:
+		var direction := (last.global_position - first.global_position).normalized()
+		# Keep the entire 0.7-scale crate inside the end rollers, not just its pivot.
+		var start := first.global_position - direction * maxf(0.05, 0.86 * first.global_basis.z.length() - 0.27)
+		var finish := last.global_position + direction * maxf(0.05, 0.86 * last.global_basis.z.length() - 0.27)
+		start.y = _queue_support_height(start)
+		finish.y = _queue_support_height(finish)
+		return PackedVector3Array([start, finish])
+	return PackedVector3Array([Vector3(QUEUE_START_X, TOP + 0.24, QUEUE_Z), Vector3(QUEUE_END_X, TOP + 0.24, QUEUE_Z)])
+
+func _queue_support_height(point: Vector3) -> float:
+	var support := -INF
+	for name in ["43_conveyor_arrow_up", "47_conveyor_gold_plate", "44_conveyor_arrow_down_a"]:
+		var belt := find_child(name, true, false) as Node3D
+		if belt == null: continue
+		var local := belt.to_local(point)
+		var footprint := 0.231 / maxf(belt.global_basis.z.length(), 0.01)
+		if absf(local.z) > 0.86 + footprint: continue
+		var top := 0.233  # slat top: 0.215 + 0.036 / 2
+		var pad_z := -0.38 if name == "43_conveyor_arrow_up" else 0.38
+		if absf(local.z - pad_z) < 0.36 + footprint:
+			top = 0.294 if name == "47_conveyor_gold_plate" else 0.312
+		support = maxf(support, belt.to_global(Vector3(0, top, local.z)).y)
+	return support + 0.006 if is_finite(support) else TOP + 0.24
+
+func _align_queue_crates() -> void:
+	var lane := _queue_lane()
+	var axis := (lane[1] - lane[0]).normalized()
+	var length := lane[0].distance_to(lane[1])
+	for crate in queue_crates:
+		if not is_instance_valid(crate): continue
+		var progress := clampf((crate.global_position - lane[0]).dot(axis), 0.0, length)
+		var point := lane[0] + axis * progress
+		point.y = _queue_support_height(point)
+		crate.global_position = point
 
 func _queue_dequeue(manual: bool) -> void:
 	if queue_crates.is_empty():

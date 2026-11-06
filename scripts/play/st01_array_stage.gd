@@ -5,7 +5,6 @@ extends Node2D
 
 const S := 1281.0 / 1672.0
 const CAP := 5
-const SLOT_X := [477.0, 642.0, 807.0, 972.0, 1137.0]
 const CRATE_SCENE := preload("res://scenes/play/Crate.tscn")
 const LEVELS := [
 	{"arr": [10, 30, 40], "tray": 20, "target": [10, 20, 30, 40], "goal": "인덱스 1에 20 넣기", "opt": 3, "ins": 1},
@@ -117,10 +116,12 @@ func _next_level() -> void:
 		get_tree().change_scene_to_file("res://scenes/Main.tscn")
 
 func slot_pos(i: int) -> Vector2:
-	return Vector2(SLOT_X[i] * S, 361)
+	var slot := world.get_node("Slot%d" % i) as Node2D
+	return world.to_local(slot.to_global(Vector2(0, -44)))
 
 func tray_pos() -> Vector2:
-	return Vector2(665 * S, 528)
+	var tray_node := world.get_node("Tray") as Node2D
+	return world.to_local(tray_node.to_global(Vector2(0, 23)))
 
 func _rebuild_crates() -> void:
 	for c in crates.values():
@@ -403,9 +404,9 @@ func _refresh() -> void:
 	var a := _next_action()
 	hint.visible = a[0] != "" and not done and not hud.dialogue_open()
 	match a[0]:
-		"slot": hint.position = Vector2(SLOT_X[a[1]] * S, 200)
-		"tray": hint.position = Vector2(tray_pos().x, 418)
-		"bin": hint.position = Vector2(904, 410)
+		"slot": hint.position = slot_pos(a[1]) + Vector2(0, -161)
+		"tray": hint.position = tray_pos() + Vector2(0, -110)
+		"bin": hint.position = world.to_local(world.get_node("Bin").global_position) + Vector2(0, -90)
 	hint_label.text = a[2]
 	# E 말풍선
 	var f := player.focus
