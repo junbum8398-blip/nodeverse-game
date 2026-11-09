@@ -6,7 +6,7 @@
   <meta name="description" content="일곱 개의 섬으로 연결된 코딩 탐험. NODEVERSE의 세계와 소개 영상, 브라우저 인터랙티브 미니게임을 만나보세요.">
   <title>NODEVERSE — 연결된 배움의 세계</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="minigame.css">
+  <link rel="stylesheet" href="island-games.css">
   <link rel="stylesheet" href="showcase.css">
 </head>
 <body>
@@ -22,7 +22,7 @@
     </a>
     <nav aria-label="주 메뉴">
       <a href="#world">세계 탐험</a>
-      <a href="#stages">10종 미니게임 <span class="tiny">10 STAGES</span></a>
+      <a href="#stages">자료구조 섬 <span class="tiny">10 STAGES</span></a>
       <a href="#demo">웹 체험판 <span class="tiny">PLAY</span></a>
       <a href="#film">소개 영상</a>
     </nav>
@@ -55,7 +55,7 @@
       <h2>외우던 개념을,<br><em>걸어서 이해하는 경험.</em></h2>
       <div>
         <p>줄지어 놓인 배열, 서로 연결된 노드, 차곡차곡 쌓이는 스택. 추상적인 개념을 작은 섬의 풍경으로 만나보세요.</p>
-        <p class="muted">NODEVERSE는 코딩과 데이터를 탐험하는 학습 게임입니다. 아래에서 웹 미니게임을 직접 조작해보고 나만의 여정을 시작하세요.</p>
+        <p class="muted">NODEVERSE는 코딩과 데이터를 탐험하는 학습 게임입니다. 아래에서 자료구조 섬 미니게임을 직접 플레이해보고 나만의 여정을 시작하세요.</p>
         <div class="facts">
           <span><b>7</b>개의 연결된 섬</span>
           <span><b>3</b>단계의 난이도</span>
@@ -102,9 +102,9 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">10 DATA STRUCTURE MINI-GAMES</p>
-          <h2>걸어서 해결하는 <em>10가지 자료구조 미니게임</em></h2>
+          <h2>자료구조 섬의 <em>10가지 스테이지</em></h2>
         </div>
-        <span class="subnote">각 스테이지마다 고유한 3D 복셀 섬과 NPC, 퍼즐 규칙이 제공됩니다.</span>
+        <span class="subnote">스테이지 소개를 둘러보고, 아래에서 스택 미니게임을 직접 플레이해 보세요.</span>
       </div>
 
       <!-- Category Filter Tabs -->
@@ -330,102 +330,16 @@
     </section>
 
 
-    <!-- INTERACTIVE WEB MINI-GAME DEMO -->
-    <section id="demo" class="demo-section">
+    <section id="demo" class="play-islands section" aria-labelledby="play-title">
       <div class="section-heading">
-        <div>
-          <p class="eyebrow">PLAY IN YOUR BROWSER</p>
-          <h2>🎮 브라우저에서 바로 만나는 <em>자료구조 미니게임</em></h2>
-        </div>
-        <span class="subnote">ST01 배열 보관소 체험판 · 클릭 또는 Z/R 키로 조작</span>
+        <div><p class="eyebrow">DATA STRUCTURE ISLAND · PLAY IN YOUR BROWSER</p><h2 id="play-title">상자 탑을 직접 쌓아보세요.</h2></div>
+        <span class="subnote">자료구조 섬 · 스택 체험판 · 설치 없이 플레이</span>
       </div>
-
-      <div class="demo-container">
-        <!-- Game Viewport -->
-        <div class="game-viewport">
-          <!-- Clear Overlay Modal -->
-          <div id="demo-clear-overlay" class="clear-overlay" style="display:none;">
-            <div class="clear-stars">★★★</div>
-            <div class="clear-title">스테이지 클리어!</div>
-            <div id="demo-clear-desc" class="clear-desc">배열 완성!</div>
-            <button id="demo-next-btn" class="next-btn">다음 레벨 도전하기 ➔</button>
-          </div>
-
-          <!-- Top Status -->
-          <div class="game-top-bar">
-            <span id="demo-level-badge" class="level-badge">레벨 01 / 02</span>
-            <div class="game-stats">
-              <span>이동 횟수: <b id="demo-moves">0</b>회</span>
-              <span>실수: <b id="demo-mistakes" style="color:#ef4444;">0</b>회</span>
-            </div>
-          </div>
-
-          <!-- Mission Banner -->
-          <div id="demo-goal" class="mission-banner">
-            <span>목표:</span> 인덱스 1에 20 넣기
-          </div>
-
-          <!-- NPC Dialogue -->
-          <div class="npc-dialogue-row">
-            <div class="npc-avatar">🤖</div>
-            <div id="demo-speech" class="npc-speech">
-              어서 와! 상자를 클릭해서 집은 뒤, 바로 옆 빈칸을 클릭해 한 칸씩 옮겨봐!
-            </div>
-          </div>
-
-          <!-- Array Storage Slots -->
-          <div class="array-board-label">배열 보관함 (0 ~ 4번 칸)</div>
-          <div id="demo-slots" class="slots-grid">
-            <!-- Dynamic Slots -->
-          </div>
-
-          <!-- Aux Row (Tray, Hand, Bin) -->
-          <div class="aux-row">
-            <div id="demo-tray" class="aux-card" title="새 상자가 들어오는 입고 트레이">
-              <span class="aux-title">📦 입고 트레이</span>
-              <div id="demo-tray-val" class="aux-val">20</div>
-            </div>
-            <div id="demo-bin" class="aux-card" title="불필요한 상자를 버리는 반환 레버">
-              <span class="aux-title">🗑️ 반환 레버 (삭제)</span>
-              <span style="font-size:12px; color:#ef4444;">클릭하여 버리기</span>
-            </div>
-            <div class="aux-card hand-card">
-              <span class="aux-title">🦾 로봇이 든 상자</span>
-              <div id="demo-hand-val" class="hand-value">(비어 있음)</div>
-            </div>
-          </div>
-
-          <!-- Controls Footer -->
-          <div class="game-controls-row">
-            <span style="font-size:11px; color:#64748b;">💡 규칙: 상자는 바로 옆 칸(±1)으로만 이동할 수 있습니다.</span>
-            <div class="btn-group">
-              <button id="demo-undo-btn" class="control-btn" title="한 걸음 되돌리기 (Z)">↩ 되돌리기 (Z)</button>
-              <button id="demo-reset-btn" class="control-btn" title="처음부터 다시하기 (R)">🔄 초기화 (R)</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Code & Telemetry Panel -->
-        <div class="code-panel">
-          <div class="code-box-wrap">
-            <div class="code-header">
-              <span>LIVE CODE GENERATOR</span>
-              <span class="pill-live">● 실시간 코드 동기화</span>
-            </div>
-            <div id="demo-code-content" class="code-content">
-              // 상자를 조작하면 코드가 실시간 생성됩니다.
-            </div>
-          </div>
-
-          <div class="telemetry-card">
-            <div class="telemetry-card-title">
-              <span>📡 실시간 텔레메트리 연동 (FastAPI / Ingestion)</span>
-            </div>
-            <div id="demo-telemetry-log" class="telemetry-log-line">
-              대기 중... (게임을 조작하면 실시간 이벤트가 기록됩니다)
-            </div>
-          </div>
-        </div>
+      <div class="play-shell">
+        <div class="play-head"><div><p>MISSION · STACK</p><h3>상자 탑 쌓기</h3></div><span id="play-progress">준비</span></div>
+        <div class="play-instructions"><b>목표</b><p>상자를 아래부터 10 → 20 → 30 순서로 쌓아 탑을 완성하세요.</p><b>하는 방법</b><p>상자 버튼을 눌러 PUSH하고, 잘못 올렸다면 POP으로 맨 위 상자부터 꺼내세요.</p></div>
+        <div id="play-board" class="play-board" aria-live="polite"></div>
+        <div class="play-actions"><button type="button" id="play-hint">힌트 보기</button><button type="button" id="play-reset">처음부터</button><span id="play-message" role="status"></span></div>
       </div>
     </section>
 
@@ -521,7 +435,7 @@
 
   <script src="config.js"></script>
   <script src="app.js"></script>
-  <script src="minigame.js"></script>
+  <script src="island-games.js"></script>
   <script src="showcase.js"></script>
 </body>
 </html>
