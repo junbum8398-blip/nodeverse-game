@@ -34,6 +34,18 @@
 섬 지형은 `scripts/builders/builder_world_terrain.gd`(WorldTerrain)가 1m 블록 셀로 생성합니다
 (잔디 상판 + 흙 절벽 + 해안 바위, 충돌 포함). 섬 위치·크기는 `nodeverse_world.gd`의 `ISLANDS` 상수에서 조정합니다.
 
+## 자료구조 스테이지 (2D, 걸어 다니는 구조)
+
+메뉴 `scenes/Main.tscn` → `scenes/stages/ST01_Array.tscn` ~ `ST10_Integrated.tscn`. NPC 설명 → WASD로 로봇 이동 + E 상호작용 → 오른쪽 코드 패널.
+ST02~ST10 은 `scripts/play/walk_stage.gd`(공통 틀)와 스테이지별 `scripts/play/stNN_*_stage.gd`(규칙)로 동작합니다.
+
+```bash
+python tools/make_sprites.py            # 상자, 토큰, NPC 맵 스프라이트
+python tools/make_game_backgrounds.py   # 원화에서 게임이 그리는 물건을 지운 배경 (bg_game.png)
+python tools/write_stage_scenes.py      # ST02~ST10 씬 생성 (걷는 영역, 상호작용 지점)
+Godot_v4.7.2-stable_win64_console.exe --path . --resolution 1280x720 res://scenes/AutoplayStages.tscn   # 전 스테이지 자동 플레이 검증
+```
+
 ## 폴더 구조
 
 ```

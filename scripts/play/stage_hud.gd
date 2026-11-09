@@ -30,6 +30,8 @@ var clear_detail: Label
 var next_button: Button
 var controls_label: Label
 var _toast_tween: Tween
+var toast_y := 80.0            # 알림 위치 (스테이지가 상단을 쓰면 아래로 옮긴다)
+var toast_center_x := 640.0
 
 static func box(bg: Color, border := INK, bw := 4, pad := 12) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -422,7 +424,7 @@ func toast(t: String, col := Color.WHITE, dur := 2.6) -> void:
 	toast_label.add_theme_color_override("font_color", col)
 	toast_panel.reset_size()
 	await get_tree().process_frame
-	toast_panel.position = Vector2(640 - toast_panel.size.x / 2, 80)
+	toast_panel.position = Vector2(toast_center_x - toast_panel.size.x / 2, toast_y)
 	if _toast_tween:
 		_toast_tween.kill()
 	toast_panel.modulate.a = 1.0

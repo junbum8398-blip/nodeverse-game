@@ -1,0 +1,324 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/play/st08_heap_stage.gd" id="1"]
+[ext_resource type="Texture2D" path="res://textures/stages/ST08/bg_game.png" id="2"]
+[ext_resource type="Script" path="res://scripts/play/interactable.gd" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/play/Player.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/play/stage_hud.gd" id="5"]
+[ext_resource type="Texture2D" path="res://textures/npc_portraits/NPC08_world.png" id="6"]
+
+[sub_resource type="CircleShape2D" id="r40"]
+radius = 40.0
+
+[sub_resource type="CircleShape2D" id="r54"]
+radius = 54.0
+
+[sub_resource type="CircleShape2D" id="r60"]
+radius = 60.0
+
+[sub_resource type="CircleShape2D" id="r62"]
+radius = 62.0
+
+[sub_resource type="CircleShape2D" id="npc_body"]
+radius = 18.0
+
+[sub_resource type="CircleShape2D" id="npc_talk"]
+radius = 64.0
+
+[sub_resource type="LabelSettings" id="hint_text"]
+font_size = 25
+font_color = Color(1, 0.86, 0.35, 1)
+outline_size = 7
+outline_color = Color(0.114, 0.106, 0.165, 1)
+
+[sub_resource type="LabelSettings" id="sign_text"]
+font_size = 21
+outline_size = 5
+outline_color = Color(0.114, 0.106, 0.165, 1)
+
+[node name="ST08_Heap" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.1, 0.13, 0.2, 1)
+
+[node name="FieldFrame" type="ColorRect" parent="."]
+offset_left = -4.0
+offset_top = 66.0
+offset_right = 971.0
+offset_bottom = 618.0
+color = Color(0.114, 0.106, 0.165, 1)
+
+[node name="Field" type="Node2D" parent="."]
+position = Vector2(0, 70)
+scale = Vector2(0.755, 0.755)
+
+[node name="Background" type="Sprite2D" parent="Field"]
+scale = Vector2(0.766148, 0.766148)
+texture = ExtResource("2")
+centered = false
+
+[node name="Walls" type="StaticBody2D" parent="Field"]
+
+[node name="Boundary0" type="CollisionPolygon2D" parent="Field/Walls"]
+build_mode = 1
+polygon = PackedVector2Array(551.6, 134.8, 683.4, 134.8, 852.0, 183.9, 864.2, 208.4, 867.3, 266.6, 1020.5, 303.4, 1054.2, 318.7, 1042.0, 392.3, 1032.8, 404.5, 861.2, 481.1, 793.7, 459.7, 772.3, 450.5, 309.5, 447.4, 303.4, 441.3, 269.7, 373.9, 269.7, 303.4, 429.0, 177.7, 551.6, 134.8)
+
+[node name="Links" type="Node2D" parent="Field"]
+
+[node name="World" type="Node2D" parent="Field"]
+y_sort_enabled = true
+
+[node name="Overlay" type="Node2D" parent="Field"]
+z_index = 3
+
+[node name="Player" parent="Field/World" instance=ExtResource("4")]
+position = Vector2(628.2, 314.1)
+
+[node name="Spawn" type="Marker2D" parent="Field/World"]
+position = Vector2(628.2, 314.1)
+
+[node name="Pad0" type="Area2D" parent="Field/World"]
+position = Vector2(613.7, 176.2)
+script = ExtResource("3")
+kind = "pad"
+index = 0
+bubble_offset = Vector2(0, -170)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Pad0"]
+shape = SubResource("r54")
+
+[node name="Pad1" type="Area2D" parent="Field/World"]
+position = Vector2(471.2, 285.0)
+script = ExtResource("3")
+kind = "pad"
+index = 1
+bubble_offset = Vector2(0, -170)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Pad1"]
+shape = SubResource("r54")
+
+[node name="Pad2" type="Area2D" parent="Field/World"]
+position = Vector2(754.7, 285.0)
+script = ExtResource("3")
+kind = "pad"
+index = 2
+bubble_offset = Vector2(0, -170)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Pad2"]
+shape = SubResource("r54")
+
+[node name="Pad3" type="Area2D" parent="Field/World"]
+position = Vector2(371.6, 413.7)
+script = ExtResource("3")
+kind = "pad"
+index = 3
+bubble_offset = Vector2(0, -170)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Pad3"]
+shape = SubResource("r54")
+
+[node name="Pad4" type="Area2D" parent="Field/World"]
+position = Vector2(545.5, 413.7)
+script = ExtResource("3")
+kind = "pad"
+index = 4
+bubble_offset = Vector2(0, -170)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Pad4"]
+shape = SubResource("r54")
+
+[node name="Pad5" type="Area2D" parent="Field/World"]
+position = Vector2(695.7, 409.9)
+script = ExtResource("3")
+kind = "pad"
+index = 5
+bubble_offset = Vector2(0, -170)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Pad5"]
+shape = SubResource("r54")
+
+[node name="Lever1" type="Area2D" parent="Field/World"]
+position = Vector2(530.2, 200.7)
+script = ExtResource("3")
+kind = "lever"
+index = 1
+bubble_offset = Vector2(0, -90)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Lever1"]
+shape = SubResource("r40")
+
+[node name="Lever2" type="Area2D" parent="Field/World"]
+position = Vector2(693.4, 200.7)
+script = ExtResource("3")
+kind = "lever"
+index = 2
+bubble_offset = Vector2(0, -90)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Lever2"]
+shape = SubResource("r40")
+
+[node name="Lever3" type="Area2D" parent="Field/World"]
+position = Vector2(402.2, 312.6)
+script = ExtResource("3")
+kind = "lever"
+index = 3
+bubble_offset = Vector2(0, -90)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Lever3"]
+shape = SubResource("r40")
+
+[node name="Lever4" type="Area2D" parent="Field/World"]
+position = Vector2(532.5, 312.6)
+script = ExtResource("3")
+kind = "lever"
+index = 4
+bubble_offset = Vector2(0, -90)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Lever4"]
+shape = SubResource("r40")
+
+[node name="Lever5" type="Area2D" parent="Field/World"]
+position = Vector2(699.5, 312.6)
+script = ExtResource("3")
+kind = "lever"
+index = 5
+bubble_offset = Vector2(0, -90)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Lever5"]
+shape = SubResource("r40")
+
+[node name="Intake" type="Area2D" parent="Field/World"]
+position = Vector2(923.2, 383.1)
+script = ExtResource("3")
+kind = "intake"
+index = -1
+bubble_offset = Vector2(0, -110)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Intake"]
+shape = SubResource("r62")
+
+[node name="Outbox" type="Area2D" parent="Field/World"]
+position = Vector2(285.0, 321.8)
+script = ExtResource("3")
+kind = "outbox"
+index = -1
+bubble_offset = Vector2(0, -100)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Outbox"]
+shape = SubResource("r60")
+
+[node name="Crate0" type="Marker2D" parent="Field/World"]
+position = Vector2(613.7, 150.2)
+
+[node name="Crate1" type="Marker2D" parent="Field/World"]
+position = Vector2(471.2, 257.4)
+
+[node name="Crate2" type="Marker2D" parent="Field/World"]
+position = Vector2(754.7, 257.4)
+
+[node name="Crate3" type="Marker2D" parent="Field/World"]
+position = Vector2(371.6, 384.6)
+
+[node name="Crate4" type="Marker2D" parent="Field/World"]
+position = Vector2(545.5, 384.6)
+
+[node name="Crate5" type="Marker2D" parent="Field/World"]
+position = Vector2(695.7, 380.0)
+
+[node name="Inbox" type="Marker2D" parent="Field/World"]
+position = Vector2(966.9, 378.5)
+
+[node name="Out" type="Marker2D" parent="Field/World"]
+position = Vector2(191.5, 360.1)
+
+[node name="Arr0" type="Marker2D" parent="Field/World"]
+position = Vector2(413.7, 485.0)
+
+[node name="Arr1" type="Marker2D" parent="Field/World"]
+position = Vector2(472.7, 485.0)
+
+[node name="Arr2" type="Marker2D" parent="Field/World"]
+position = Vector2(526.3, 485.0)
+
+[node name="Arr3" type="Marker2D" parent="Field/World"]
+position = Vector2(583.8, 485.0)
+
+[node name="Arr4" type="Marker2D" parent="Field/World"]
+position = Vector2(643.6, 485.0)
+
+[node name="Arr5" type="Marker2D" parent="Field/World"]
+position = Vector2(702.6, 485.0)
+
+[node name="Npc" type="StaticBody2D" parent="Field/World"]
+position = Vector2(796.8, 422.9)
+
+[node name="Shadow" type="Polygon2D" parent="Field/World/Npc"]
+color = Color(0, 0, 0, 0.28)
+polygon = PackedVector2Array(30.0, 0.0, 27.7, 3.4, 21.2, 6.4, 11.5, 8.3, 0.0, 9.0, -11.5, 8.3, -21.2, 6.4, -27.7, 3.4, -30.0, 0.0, -27.7, -3.4, -21.2, -6.4, -11.5, -8.3, -0.0, -9.0, 11.5, -8.3, 21.2, -6.4, 27.7, -3.4)
+
+[node name="Sprite" type="Sprite2D" parent="Field/World/Npc"]
+texture = ExtResource("6")
+offset = Vector2(0, -75)
+
+[node name="Body" type="CollisionShape2D" parent="Field/World/Npc"]
+shape = SubResource("npc_body")
+
+[node name="Talk" type="Area2D" parent="Field/World/Npc"]
+script = ExtResource("3")
+kind = "npc"
+prompt = "긴급 배정 담당자과 대화"
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Npc/Talk"]
+shape = SubResource("npc_talk")
+
+[node name="Name" type="Label" parent="Field/World/Npc"]
+offset_left = -90.0
+offset_top = -182.0
+offset_right = 90.0
+offset_bottom = -158.0
+text = "긴급 배정 담당자"
+label_settings = SubResource("sign_text")
+horizontal_alignment = 1
+
+[node name="Sign0" type="Label" parent="Field/World"]
+z_index = 4
+offset_left = 876.9
+offset_top = 404.6
+offset_right = 1056.9
+offset_bottom = 430.6
+text = "입고"
+label_settings = SubResource("sign_text")
+horizontal_alignment = 1
+
+[node name="Sign1" type="Label" parent="Field/World"]
+z_index = 4
+offset_left = 195.0
+offset_top = 370.1
+offset_right = 375.0
+offset_bottom = 396.1
+text = "완료 접수"
+label_settings = SubResource("sign_text")
+horizontal_alignment = 1
+
+[node name="HintArrow" type="Node2D" parent="Field/World"]
+z_index = 5
+position = Vector2(400, 250)
+
+[node name="Arrow" type="Polygon2D" parent="Field/World/HintArrow"]
+color = Color(1, 0.8, 0.25, 1)
+polygon = PackedVector2Array(-16.0, -22.0, 16.0, -22.0, 0.0, 0.0)
+
+[node name="Label" type="Label" parent="Field/World/HintArrow"]
+offset_left = -200.0
+offset_top = -62.0
+offset_right = 200.0
+offset_bottom = -26.0
+text = "다음 행동"
+label_settings = SubResource("hint_text")
+horizontal_alignment = 1
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5")

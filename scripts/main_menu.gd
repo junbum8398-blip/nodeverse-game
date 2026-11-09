@@ -2,16 +2,16 @@ extends "res://scripts/minigames/mini_game_base.gd"
 ## 메인 메뉴: 스테이지 10종(도트 미니게임)
 
 const STAGES := [
-	["ST01", "순서가 있는 보관소", "배열", "st01_array"],
-	["ST02", "끊어진 운송로", "연결 리스트", "st02_linked_list"],
-	["ST03", "최근 작업 복구실", "스택", "st03_stack"],
-	["ST04", "접수 순서 안내소", "큐 / 덱", "st04_queue_deque"],
-	["ST05", "이름으로 찾는 물품대장", "해시", "st05_hash"],
-	["ST06", "계층형 자료실", "이진 트리", "st06_binary_tree"],
-	["ST07", "갈림길 창고", "이진 탐색 트리", "st07_bst"],
-	["ST08", "긴급 작업 배정실", "힙", "st08_heap"],
-	["ST09", "연결망 조사실", "그래프", "st09_graph"],
-	["ST10", "학습 지원 센터", "통합", "st10_integrated"],
+	["ST01", "순서가 있는 보관소", "배열", "ST01_Array"],
+	["ST02", "끊어진 운송로", "연결 리스트", "ST02_LinkedList"],
+	["ST03", "최근 작업 복구실", "스택", "ST03_Stack"],
+	["ST04", "접수 순서 안내소", "큐 / 덱", "ST04_QueueDeque"],
+	["ST05", "이름으로 찾는 물품대장", "해시", "ST05_Hash"],
+	["ST06", "계층형 자료실", "이진 트리", "ST06_BinaryTree"],
+	["ST07", "갈림길 창고", "이진 탐색 트리", "ST07_Bst"],
+	["ST08", "긴급 작업 배정실", "힙", "ST08_Heap"],
+	["ST09", "연결망 조사실", "그래프", "ST09_Graph"],
+	["ST10", "학습 지원 센터", "통합", "ST10_Integrated"],
 ]
 
 var thumbs := {}
@@ -55,10 +55,8 @@ func _go(id) -> void:
 		_go_back_to_world()
 	elif id == "npc":
 		get_tree().change_scene_to_file("res://scenes/NPCViewer.tscn")
-	elif id == "st01_array":
-		get_tree().change_scene_to_file("res://scenes/stages/ST01_Array.tscn")
 	else:
-		get_tree().change_scene_to_file("res://scenes/minigames/%s.tscn" % id)
+		get_tree().change_scene_to_file("res://scenes/stages/%s.tscn" % id)
 
 func _draw() -> void:
 	_buttons.clear()

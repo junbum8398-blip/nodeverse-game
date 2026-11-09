@@ -1,0 +1,260 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/play/st05_hash_stage.gd" id="1"]
+[ext_resource type="Texture2D" path="res://textures/stages/ST05/bg_game.png" id="2"]
+[ext_resource type="Script" path="res://scripts/play/interactable.gd" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/play/Player.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/play/stage_hud.gd" id="5"]
+[ext_resource type="Texture2D" path="res://textures/npc_portraits/NPC05_world.png" id="6"]
+
+[sub_resource type="CircleShape2D" id="r46"]
+radius = 46.0
+
+[sub_resource type="CircleShape2D" id="r54"]
+radius = 54.0
+
+[sub_resource type="CircleShape2D" id="r62"]
+radius = 62.0
+
+[sub_resource type="CircleShape2D" id="r66"]
+radius = 66.0
+
+[sub_resource type="CircleShape2D" id="r74"]
+radius = 74.0
+
+[sub_resource type="CircleShape2D" id="npc_body"]
+radius = 18.0
+
+[sub_resource type="CircleShape2D" id="npc_talk"]
+radius = 64.0
+
+[sub_resource type="LabelSettings" id="hint_text"]
+font_size = 25
+font_color = Color(1, 0.86, 0.35, 1)
+outline_size = 7
+outline_color = Color(0.114, 0.106, 0.165, 1)
+
+[sub_resource type="LabelSettings" id="sign_text"]
+font_size = 21
+outline_size = 5
+outline_color = Color(0.114, 0.106, 0.165, 1)
+
+[node name="ST05_Hash" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.1, 0.13, 0.2, 1)
+
+[node name="FieldFrame" type="ColorRect" parent="."]
+offset_left = -4.0
+offset_top = 66.0
+offset_right = 971.0
+offset_bottom = 618.0
+color = Color(0.114, 0.106, 0.165, 1)
+
+[node name="Field" type="Node2D" parent="."]
+position = Vector2(0, 70)
+scale = Vector2(0.755, 0.755)
+
+[node name="Background" type="Sprite2D" parent="Field"]
+scale = Vector2(0.766148, 0.766148)
+texture = ExtResource("2")
+centered = false
+
+[node name="Walls" type="StaticBody2D" parent="Field"]
+
+[node name="Boundary0" type="CollisionPolygon2D" parent="Field/Walls"]
+build_mode = 1
+polygon = PackedVector2Array(343.2, 386.1, 983.7, 386.1, 989.9, 392.3, 989.9, 422.9, 983.7, 429.0, 757.0, 429.0, 757.0, 536.3, 717.1, 560.8, 677.3, 585.3, 490.3, 609.9, 275.8, 551.6, 128.7, 533.2, 119.5, 524.0, 125.6, 514.9, 251.3, 478.1, 327.9, 432.1, 334.0, 395.3, 343.2, 386.1)
+
+[node name="Boundary1" type="CollisionPolygon2D" parent="Field/Walls"]
+build_mode = 1
+polygon = PackedVector2Array(524.0, 422.9, 471.9, 429.0, 432.1, 447.4, 407.6, 484.2, 410.7, 505.7, 432.1, 533.2, 471.9, 551.6, 521.0, 554.7, 570.0, 551.6, 609.9, 533.2, 634.4, 496.5, 631.3, 475.0, 609.9, 447.4, 570.0, 429.0, 524.0, 422.9)
+
+[node name="Links" type="Node2D" parent="Field"]
+
+[node name="World" type="Node2D" parent="Field"]
+y_sort_enabled = true
+
+[node name="Overlay" type="Node2D" parent="Field"]
+z_index = 3
+
+[node name="Player" parent="Field/World" instance=ExtResource("4")]
+position = Vector2(735.5, 413.7)
+
+[node name="Spawn" type="Marker2D" parent="Field/World"]
+position = Vector2(735.5, 413.7)
+
+[node name="Bucket0" type="Area2D" parent="Field/World"]
+position = Vector2(392.3, 383.1)
+script = ExtResource("3")
+kind = "bucket"
+index = 0
+bubble_offset = Vector2(0, -220)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Bucket0"]
+shape = SubResource("r46")
+
+[node name="Bucket1" type="Area2D" parent="Field/World"]
+position = Vector2(488.0, 383.1)
+script = ExtResource("3")
+kind = "bucket"
+index = 1
+bubble_offset = Vector2(0, -220)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Bucket1"]
+shape = SubResource("r46")
+
+[node name="Bucket2" type="Area2D" parent="Field/World"]
+position = Vector2(602.2, 383.1)
+script = ExtResource("3")
+kind = "bucket"
+index = 2
+bubble_offset = Vector2(0, -220)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Bucket2"]
+shape = SubResource("r54")
+
+[node name="Bucket3" type="Area2D" parent="Field/World"]
+position = Vector2(717.9, 383.1)
+script = ExtResource("3")
+kind = "bucket"
+index = 3
+bubble_offset = Vector2(0, -220)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Bucket3"]
+shape = SubResource("r46")
+
+[node name="Bucket4" type="Area2D" parent="Field/World"]
+position = Vector2(819.8, 383.1)
+script = ExtResource("3")
+kind = "bucket"
+index = 4
+bubble_offset = Vector2(0, -220)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Bucket4"]
+shape = SubResource("r46")
+
+[node name="Intake" type="Area2D" parent="Field/World"]
+position = Vector2(314.1, 452.0)
+script = ExtResource("3")
+kind = "intake"
+index = -1
+bubble_offset = Vector2(0, -90)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Intake"]
+shape = SubResource("r66")
+
+[node name="Dup" type="Area2D" parent="Field/World"]
+position = Vector2(896.4, 398.4)
+script = ExtResource("3")
+kind = "dup"
+index = -1
+bubble_offset = Vector2(0, -70)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Dup"]
+shape = SubResource("r74")
+
+[node name="Hash" type="Area2D" parent="Field/World"]
+position = Vector2(521.0, 426.0)
+script = ExtResource("3")
+kind = "hash"
+index = -1
+bubble_offset = Vector2(0, -60)
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Hash"]
+shape = SubResource("r62")
+
+[node name="Tag0" type="Marker2D" parent="Field/World"]
+position = Vector2(392.3, 252.8)
+
+[node name="Tag1" type="Marker2D" parent="Field/World"]
+position = Vector2(488.0, 252.8)
+
+[node name="Tag2" type="Marker2D" parent="Field/World"]
+position = Vector2(602.2, 252.8)
+
+[node name="Tag3" type="Marker2D" parent="Field/World"]
+position = Vector2(717.9, 252.8)
+
+[node name="Tag4" type="Marker2D" parent="Field/World"]
+position = Vector2(819.8, 252.8)
+
+[node name="Inbox" type="Marker2D" parent="Field/World"]
+position = Vector2(275.8, 419.8)
+
+[node name="Panel" type="Marker2D" parent="Field/World"]
+position = Vector2(1164.5, 172.4)
+
+[node name="Npc" type="StaticBody2D" parent="Field/World"]
+position = Vector2(674.2, 498.0)
+
+[node name="Shadow" type="Polygon2D" parent="Field/World/Npc"]
+color = Color(0, 0, 0, 0.28)
+polygon = PackedVector2Array(30.0, 0.0, 27.7, 3.4, 21.2, 6.4, 11.5, 8.3, 0.0, 9.0, -11.5, 8.3, -21.2, 6.4, -27.7, 3.4, -30.0, 0.0, -27.7, -3.4, -21.2, -6.4, -11.5, -8.3, -0.0, -9.0, 11.5, -8.3, 21.2, -6.4, 27.7, -3.4)
+
+[node name="Sprite" type="Sprite2D" parent="Field/World/Npc"]
+texture = ExtResource("6")
+offset = Vector2(0, -75)
+
+[node name="Body" type="CollisionShape2D" parent="Field/World/Npc"]
+shape = SubResource("npc_body")
+
+[node name="Talk" type="Area2D" parent="Field/World/Npc"]
+script = ExtResource("3")
+kind = "npc"
+prompt = "물품대장 담당자과 대화"
+
+[node name="Shape" type="CollisionShape2D" parent="Field/World/Npc/Talk"]
+shape = SubResource("npc_talk")
+
+[node name="Name" type="Label" parent="Field/World/Npc"]
+offset_left = -90.0
+offset_top = -182.0
+offset_right = 90.0
+offset_bottom = -158.0
+text = "물품대장 담당자"
+label_settings = SubResource("sign_text")
+horizontal_alignment = 1
+
+[node name="Sign0" type="Label" parent="Field/World"]
+z_index = 4
+offset_left = 149.0
+offset_top = 498.8
+offset_right = 329.0
+offset_bottom = 524.8
+text = "입고대"
+label_settings = SubResource("sign_text")
+horizontal_alignment = 1
+
+[node name="Sign1" type="Label" parent="Field/World"]
+z_index = 4
+offset_left = 806.4
+offset_top = 498.8
+offset_right = 986.4
+offset_bottom = 524.8
+text = "중복 거절함"
+label_settings = SubResource("sign_text")
+horizontal_alignment = 1
+
+[node name="HintArrow" type="Node2D" parent="Field/World"]
+z_index = 5
+position = Vector2(400, 250)
+
+[node name="Arrow" type="Polygon2D" parent="Field/World/HintArrow"]
+color = Color(1, 0.8, 0.25, 1)
+polygon = PackedVector2Array(-16.0, -22.0, 16.0, -22.0, 0.0, 0.0)
+
+[node name="Label" type="Label" parent="Field/World/HintArrow"]
+offset_left = -200.0
+offset_top = -62.0
+offset_right = 200.0
+offset_bottom = -26.0
+text = "다음 행동"
+label_settings = SubResource("hint_text")
+horizontal_alignment = 1
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5")

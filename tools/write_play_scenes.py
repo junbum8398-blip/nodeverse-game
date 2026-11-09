@@ -88,33 +88,7 @@ text = "E"
 label_settings = SubResource("bubble_text")
 ''')
 
-write("scenes/play/Crate.tscn", '''[gd_scene load_steps=4 format=3]
-
-[ext_resource type="Script" path="res://scripts/play/crate.gd" id="1"]
-[ext_resource type="Texture2D" path="res://textures/sprites/crate.png" id="2"]
-
-[sub_resource type="LabelSettings" id="num"]
-font_size = 24
-font_color = Color(0.2, 0.13, 0.08, 1)
-
-[node name="Crate" type="Node2D"]
-script = ExtResource("1")
-
-[node name="Sprite" type="Sprite2D" parent="."]
-scale = Vector2(0.72, 0.72)
-texture = ExtResource("2")
-offset = Vector2(0, -62)
-
-[node name="Label" type="Label" parent="."]
-offset_left = -31.0
-offset_top = -48.0
-offset_right = 25.0
-offset_bottom = -16.0
-text = "0"
-label_settings = SubResource("num")
-horizontal_alignment = 1
-vertical_alignment = 1
-''')
+# Crate.tscn / Token.tscn 은 tools/write_stage_scenes.py 가 만든다.
 
 # ---------- ST01 ----------
 SLOT_X = [477.0, 642.0, 807.0, 972.0, 1137.0]
