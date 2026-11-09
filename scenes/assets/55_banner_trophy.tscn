@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/props/55_banner_trophy.glb" id="1"]
+
+[node name="55_banner_trophy" instance=ExtResource("1")]

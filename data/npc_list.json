@@ -1,0 +1,182 @@
+[
+  {
+    "id": "NPC00_hub_guide",
+    "name": "중앙 광장 안내원",
+    "voxel_size": [
+      52,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      89,
+      51,
+      44
+    ],
+    "head_rows": [
+      1,
+      29
+    ]
+  },
+  {
+    "id": "NPC01_array_keeper",
+    "name": "보관소 관리인",
+    "voxel_size": [
+      44,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      117,
+      66,
+      43
+    ],
+    "head_rows": [
+      1,
+      25
+    ]
+  },
+  {
+    "id": "NPC02_link_engineer",
+    "name": "운송로 정비사",
+    "voxel_size": [
+      50,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      189,
+      145,
+      72
+    ],
+    "head_rows": [
+      1,
+      33
+    ]
+  },
+  {
+    "id": "NPC03_restore_artisan",
+    "name": "복구실 장인",
+    "voxel_size": [
+      56,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      155,
+      144,
+      145
+    ],
+    "head_rows": [
+      1,
+      31
+    ]
+  },
+  {
+    "id": "NPC04_receptionist",
+    "name": "접수 안내원",
+    "voxel_size": [
+      58,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      74,
+      56,
+      56
+    ],
+    "head_rows": [
+      1,
+      32
+    ]
+  },
+  {
+    "id": "NPC05_registry_clerk",
+    "name": "물품대장 기록원",
+    "voxel_size": [
+      43,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      58,
+      46,
+      47
+    ],
+    "head_rows": [
+      1,
+      30
+    ]
+  },
+  {
+    "id": "NPC06_tree_archivist",
+    "name": "계층형 자료실 사서",
+    "voxel_size": [
+      39,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      154,
+      137,
+      136
+    ],
+    "head_rows": [
+      1,
+      31
+    ]
+  },
+  {
+    "id": "NPC07_bst_warden",
+    "name": "갈림길 창고 길잡이",
+    "voxel_size": [
+      47,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      207,
+      151,
+      80
+    ],
+    "head_rows": [
+      1,
+      25
+    ]
+  },
+  {
+    "id": "NPC08_priority_dispatcher",
+    "name": "긴급 작업 배정관",
+    "voxel_size": [
+      49,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      83,
+      60,
+      67
+    ],
+    "head_rows": [
+      1,
+      21
+    ]
+  },
+  {
+    "id": "NPC09_graph_surveyor",
+    "name": "연결망 조사원",
+    "voxel_size": [
+      57,
+      104
+    ],
+    "max_half_depth": 12,
+    "hair_color": [
+      74,
+      47,
+      38
+    ],
+    "head_rows": [
+      1,
+      31
+    ]
+  }
+]

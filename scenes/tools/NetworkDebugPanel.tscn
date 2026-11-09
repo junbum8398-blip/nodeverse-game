@@ -1,0 +1,243 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/tools/network_debug_panel.gd" id="1_debug"]
+[ext_resource type="FontFile" path="res://fonts/NotoSansKR_Bold.tres" id="2_bold"]
+[ext_resource type="FontFile" path="res://fonts/NotoSansKR_Medium.tres" id="3_med"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.0784314, 0.101961, 0.152941, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.235294, 0.490196, 0.815686, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_log"]
+bg_color = Color(0.0470588, 0.0588235, 0.0862745, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.180392, 0.231373, 0.321569, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="NetworkDebugPanel" type="CanvasLayer"]
+process_mode = 3
+layer = 125
+script = ExtResource("1_debug")
+
+[node name="TogglePillBtn" type="Button" parent="."]
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -210.0
+offset_top = 12.0
+offset_right = -14.0
+offset_bottom = 44.0
+grow_horizontal = 0
+focus_mode = 0
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 14
+text = "📡 전송 디버그 (F6)"
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -410.0
+offset_top = -290.0
+offset_right = 410.0
+offset_bottom = 290.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.9, 0.95, 1, 1)
+text = "📡 NODEVERSE 미니게임 데이터 전송 디버그 패널"
+
+[node name="CloseBtn" type="Button" parent="Panel/VBox/Header"]
+custom_minimum_size = Vector2(32, 28)
+layout_mode = 2
+focus_mode = 0
+theme_override_fonts/font = ExtResource("2_bold")
+text = "✕"
+
+[node name="HSeparator1" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="ConfigSection" type="VBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Grid" type="HBoxContainer" parent="Panel/VBox/ConfigSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HostLabel" type="Label" parent="Panel/VBox/ConfigSection/Grid"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "서버 IP:"
+
+[node name="HostEdit" type="LineEdit" parent="Panel/VBox/ConfigSection/Grid"]
+custom_minimum_size = Vector2(140, 32)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "192.168.0.81"
+placeholder_text = "192.168.0.81"
+
+[node name="PortLabel" type="Label" parent="Panel/VBox/ConfigSection/Grid"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "포트:"
+
+[node name="PortEdit" type="LineEdit" parent="Panel/VBox/ConfigSection/Grid"]
+custom_minimum_size = Vector2(65, 32)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "8000"
+placeholder_text = "8000"
+
+[node name="EndpointLabel" type="Label" parent="Panel/VBox/ConfigSection/Grid"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "경로:"
+
+[node name="EndpointEdit" type="LineEdit" parent="Panel/VBox/ConfigSection/Grid"]
+custom_minimum_size = Vector2(110, 32)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "/v1/events"
+
+[node name="KeyLabel" type="Label" parent="Panel/VBox/ConfigSection/Grid"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "API Key:"
+
+[node name="KeyEdit" type="LineEdit" parent="Panel/VBox/ConfigSection/Grid"]
+custom_minimum_size = Vector2(130, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+placeholder_text = "팀원 API 키"
+
+[node name="BtnRow" type="HBoxContainer" parent="Panel/VBox/ConfigSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SaveBtn" type="Button" parent="Panel/VBox/ConfigSection/BtnRow"]
+custom_minimum_size = Vector2(110, 32)
+layout_mode = 2
+focus_mode = 0
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "💾 설정 저장"
+
+[node name="PingBtn" type="Button" parent="Panel/VBox/ConfigSection/BtnRow"]
+custom_minimum_size = Vector2(140, 32)
+layout_mode = 2
+focus_mode = 0
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "🔄 연결 테스트(Ping)"
+
+[node name="TestSendBtn" type="Button" parent="Panel/VBox/ConfigSection/BtnRow"]
+custom_minimum_size = Vector2(150, 32)
+layout_mode = 2
+focus_mode = 0
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "🚀 테스트 이벤트 전송"
+
+[node name="ClearLogBtn" type="Button" parent="Panel/VBox/ConfigSection/BtnRow"]
+custom_minimum_size = Vector2(100, 32)
+layout_mode = 2
+focus_mode = 0
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+text = "🧹 로그 비우기"
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="StatusBar" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="StatusBadge" type="Label" parent="Panel/VBox/StatusBar"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 14
+text = "● 대기 중"
+
+[node name="StatusDesc" type="Label" parent="Panel/VBox/StatusBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+text = "네트워크 초기화 완료"
+text_overrun_behavior = 3
+
+[node name="StatsLabel" type="Label" parent="Panel/VBox/StatusBar"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.7, 0.75, 0.8, 1)
+text = "성공: 0 | 실패: 0 | 대기: 0"
+
+[node name="LogSection" type="PanelContainer" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_log")
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/VBox/LogSection"]
+layout_mode = 2
+
+[node name="LogBox" type="RichTextLabel" parent="Panel/VBox/LogSection/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_fonts/normal_font = ExtResource("3_med")
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+scroll_following = true
+
+[node name="Footer" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_med")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 0.9)
+text = "💡 팀원 서버: http://192.168.0.81:8000/v1/events | 대시보드: http://192.168.0.81:8010/ (오프라인 시에도 게임은 안전하게 계속 진행됩니다)"
+autowrap_mode = 2

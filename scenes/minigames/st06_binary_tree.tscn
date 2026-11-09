@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/minigames/st06_binary_tree.gd" id="1"]
+
+[node name="ST06_BINARY_TREE" type="Node2D"]
+script = ExtResource("1")
