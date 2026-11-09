@@ -100,6 +100,11 @@ func start_level(n: int) -> void:
 	_rebuild_crates()
 	_refresh()
 	hud.toast("레벨 %d / %d : %s" % [n + 1, LEVELS.size(), L.goal], StageHUD.GOLD)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		if n == 0:
+			nm.call("start_task", "ST01_ARRAY", {"title": "순서가 있는 보관소", "goal": L.goal, "total_levels": LEVELS.size()})
+		nm.call("start_attempt", "ST01_ARRAY", n + 1, {"goal": L.goal, "initial_arr": L.arr})
 	if n != _talked_level:
 		_talked_level = n
 		if n == 0 and not intro_seen:
@@ -259,6 +264,9 @@ func _slot(i: int) -> void:
 		_code_replace("arr[%d] = arr[%d];" % [i, hand.from], "%d→%d번" % [hand.v, i])
 	if typeof(hand.from) != TYPE_INT or hand.from != i:
 		moves += 1
+		var nm = get_node_or_null("/root/NetworkManager")
+		if nm:
+			nm.call("record_operation", "slot_move", true, "", {}, {"slots": slots}, {"slot": i, "moves": moves})
 	hand = null
 	var c: StageCrate = crates["hand"]
 	crates.erase("hand")
@@ -304,6 +312,9 @@ func _bin() -> void:
 		return
 	_snapshot()
 	moves += 1
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "bin_delete", true, "", {}, {}, {"value": hand.v, "moves": moves})
 	_code_replace("arr[%d] = null;" % hand.from, "%d 삭제" % hand.v)
 	hud.toast("%d 삭제! 이제 뒤쪽 상자들을 왼쪽으로 한 칸씩 당기세요." % hand.v, StageHUD.GREEN)
 	hand = null
@@ -321,6 +332,9 @@ func _carry(c: StageCrate) -> void:
 func _wrong(msg: String) -> void:
 	mistakes += 1
 	hud.toast("✗ " + msg, StageHUD.RED, 3.0)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "wrong_move", false, msg, {}, {}, {"mistakes": mistakes, "moves": moves, "stage": "ST01_ARRAY"})
 	var tw := create_tween()
 	for k in 3:
 		tw.tween_property(player.sprite, "position:x", 6.0, 0.04)
@@ -350,6 +364,11 @@ func _check() -> void:
 		var last := level >= LEVELS.size() - 1
 		hud.show_clear("스테이지 클리어!" if last else "레벨 %d 클리어!" % (level + 1), stars,
 			"배열 %s 완성\n이동 %d회 (최소 %d회) · 실수 %d회" % [str(arr), moves, opt, mistakes], last)
+		var nm = get_node_or_null("/root/NetworkManager")
+		if nm:
+			nm.call("complete_attempt", "ST01_ARRAY", true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": stars})
+			if last:
+				nm.call("complete_task", "ST01_ARRAY", {"moves": moves, "mistakes": mistakes, "stars": stars, "completed_levels": LEVELS.size()})
 		if last:
 			MiniGameBase.cleared["ST01"] = maxi(int(MiniGameBase.cleared.get("ST01", 0)), stars)
 
@@ -365,6 +384,9 @@ func _undo_last() -> void:
 	_rebuild_crates()
 	_refresh()
 	hud.toast("되돌렸어요.")
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "undo", true, "", {}, {}, {"moves": moves, "stage": "ST01_ARRAY"})
 
 # ---------- 안내 ----------
 func _next_action() -> Array:

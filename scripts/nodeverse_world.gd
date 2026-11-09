@@ -757,7 +757,7 @@ func _solid(n: Node3D, shrink: float = 0.9) -> void:
 	n.add_child(body)
 	_reserve(Vector2(n.position.x, n.position.z), maxf(bb.size.x, bb.size.z) * n.scale.x * 0.6)
 
-func _collider(center: Vector3, size: Vector3, rot_y: float = 0.0) -> void:
+func _collider(center: Vector3, size: Vector3, rot: Variant = 0.0) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -765,8 +765,24 @@ func _collider(center: Vector3, size: Vector3, rot_y: float = 0.0) -> void:
 	cs.shape = shape
 	body.add_child(cs)
 	body.position = center
-	body.rotation_degrees = Vector3(0.0, rot_y, 0.0)
+	if rot is Vector3:
+		body.rotation_degrees = rot
+	elif rot is float or rot is int:
+		body.rotation_degrees = Vector3(0.0, float(rot), 0.0)
 	add_child(body)
+	return body
+
+func _cylinder_collider(center: Vector3, radius: float, height: float) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	var cs := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = radius
+	shape.height = height
+	cs.shape = shape
+	body.add_child(cs)
+	body.position = center
+	add_child(body)
+	return body
 
 func _reserve(p: Vector2, r: float) -> void:
 	reserved.append([p, r])
@@ -1177,12 +1193,24 @@ func _build_data_island() -> void:
 	_path("Path_Data_N", [c, c + Vector2(0.0, -3.5)], 1.2)
 	_path("Path_Data_S", [c, c + Vector2(0.0, 3.5)], 1.2)
 
-	# 1. 표지판 및 탐험 나침반 (중앙)
+	# 1. 표지판 및 탐험 나침반 (중앙 광장 서측에 이격 배치하여 전망대 진입로 완전 개방)
 	_spawn("OBJ42_sign_exploration", Vector3(c.x - 3.2, TOP, c.y - 2.5), 45.0, 1.0, true)
-	_spawn("OBJ38_exploration_compass", Vector3(c.x, TOP, c.y), 0.0, 1.1, true)
+	_spawn("OBJ38_exploration_compass", Vector3(c.x - 2.2, TOP, c.y + 0.5), -15.0, 1.1)
+	_collider(Vector3(c.x - 2.2, TOP + 0.75, c.y + 0.5), Vector3(2.4, 1.5, 2.4))
 
-	# 2. 데이터 트리 수목 전망대 (북동)
-	_spawn("OBJ35_data_tree_observatory", Vector3(c.x + 3.5, TOP, c.y - 2.5), -35.0, 1.0, true)
+	# 2. 데이터 트리 수목 전망대 (북동쪽)
+	var tree_pos := Vector3(c.x + 3.2, TOP, c.y - 2.5)
+	_spawn("OBJ35_data_tree_observatory", tree_pos, 0.0, 1.0)
+	# 지상 기둥 및 뿌리 차단 콜라이더 (로봇이 안쪽으로 파고들거나 겹치는 현상 완전 방지)
+	_collider(tree_pos + Vector3(0.0, 0.85, 0.0), Vector3(2.4, 1.7, 2.4))
+	# 전망대 사다리/계단 보행 경사로 (지상 TOP -> 2층 전망대 완벽 보행 지원)
+	_collider(tree_pos + Vector3(1.2, 1.0, 1.2), Vector3(1.0, 0.25, 2.0), Vector3(38.0, -45.0, 0.0))
+	# 2층 원형 발코니 전망대 바닥 원형 실린더 콜라이더 (R=1.65, H=0.20)
+	_cylinder_collider(tree_pos + Vector3(0.0, 2.0, 0.0), 1.65, 0.20)
+	# 2층 중앙 나무 기둥 및 추락 방지 난간
+	_collider(tree_pos + Vector3(0.0, 2.8, 0.0), Vector3(1.0, 1.6, 1.0))
+	_collider(tree_pos + Vector3(0.0, 2.6, -1.5), Vector3(2.8, 1.2, 0.25))
+	_collider(tree_pos + Vector3(-1.5, 2.6, 0.0), Vector3(0.25, 1.2, 2.8))
 
 	# 3. 히스토그램 & 네트워크 디스플레이 (남쪽)
 	_spawn("OBJ36_histogram_display", Vector3(c.x - 2.8, TOP, c.y + 2.8), 20.0, 1.0, true)
@@ -1207,12 +1235,34 @@ func _build_challenge_island() -> void:
 	_path("Path_Chal_Colonnade_L", [c + Vector2(-2.4, 4.0), c + Vector2(-2.4, -1.0)], 1.0)
 	_path("Path_Chal_Colonnade_R", [c + Vector2(2.4, 4.0), c + Vector2(2.4, -1.0)], 1.0)
 
-	# 1. 표지판 및 기둥 파빌리온 신전 (중앙)
-	_spawn("OBJ43_sign_challenge", Vector3(c.x - 3.2, TOP, c.y + 4.2), 30.0, 1.0, true)
-	_spawn("OBJ40_column_pavilion", Vector3(c.x, TOP, c.y - 1.5), 0.0, 1.15, true)
+	# 1. 표지판 (좌측 잔디에 우아하게 배치하여 광장 진입로 개방)
+	_spawn("OBJ43_sign_challenge", Vector3(c.x - 3.8, TOP, c.y + 4.2), 30.0, 1.0, true)
 
-	# 2. 크리스탈 천체 전망대 제단
-	_spawn("OBJ39_crystal_observatory", Vector3(c.x, TOP + 0.1, c.y - 1.5), 0.0, 1.0, true)
+	# 2. 크리스탈 천체 전망대 제단 및 기둥 파빌리온 신전 (중앙)
+	# solid=false로 생성하여 사각 박스로 인한 허공 보행 버그를 방지하고 정밀 실린더 콜라이더 적용
+	_spawn("OBJ40_column_pavilion", Vector3(c.x, TOP, c.y - 1.5), 0.0, 1.15)
+	_spawn("OBJ39_crystal_observatory", Vector3(c.x, TOP + 0.1, c.y - 1.5), 0.0, 1.0)
+
+	# 신전 전면 계단 경사로 콜라이더 (원형 신전으로 자연스럽게 걸어 진입)
+	_collider(Vector3(c.x, TOP + 0.65, c.y + 0.7), Vector3(3.0, 0.3, 2.2), Vector3(30.0, 0.0, 0.0))
+	_collider(Vector3(c.x, TOP + 1.15, c.y - 0.3), Vector3(2.8, 0.35, 0.6))
+	# 계단 측면 낙하/공중보행 방지 난간
+	_collider(Vector3(c.x - 1.55, TOP + 1.0, c.y + 0.6), Vector3(0.2, 1.2, 2.2))
+	_collider(Vector3(c.x + 1.55, TOP + 1.0, c.y + 0.6), Vector3(0.2, 1.2, 2.2))
+
+	# [핵심] 신전 상부 원형 바닥 정밀 실린더 콜라이더 (사각 박스로 인한 공중 보행 버그 완전 해결!)
+	# 원형 회랑 직경에 100% 일치하도록 원형 실린더 콜라이더 적용
+	_cylinder_collider(Vector3(c.x, TOP + 1.15, c.y - 1.5), 3.05, 0.35)
+
+	# 중앙 크리스탈 제단 콜라이더
+	_collider(Vector3(c.x, TOP + 1.8, c.y - 1.5), Vector3(1.2, 1.6, 1.2))
+
+	# 신전 기둥 라인을 따르는 외곽 방호벽 (원형 회랑 내부에서 조망하되 허공으로 떨어지지 않게 보호)
+	_collider(Vector3(c.x, TOP + 2.0, c.y - 4.45), Vector3(5.6, 1.8, 0.3))     # 북측 후면 (바다 방향)
+	_collider(Vector3(c.x - 2.95, TOP + 2.0, c.y - 1.5), Vector3(0.3, 1.8, 5.4))    # 서측 기둥 라인
+	_collider(Vector3(c.x + 2.95, TOP + 2.0, c.y - 1.5), Vector3(0.3, 1.8, 5.4))     # 동측 기둥 라인
+	_collider(Vector3(c.x - 2.25, TOP + 2.0, c.y + 0.65), Vector3(1.4, 1.8, 0.3))   # 남서 전면 기둥 날개
+	_collider(Vector3(c.x + 2.25, TOP + 2.0, c.y + 0.65), Vector3(1.4, 1.8, 0.3))    # 남동 전면 기둥 날개
 
 	# 4. 트로피 깃발 & 황동 난간
 	_spawn("55_banner_trophy", Vector3(c.x - 1.8, TOP, c.y + 4.5), 20.0, 1.0, true)
@@ -1424,6 +1474,9 @@ func _open_computer_game() -> void:
 func _switch_to_2d() -> void:
 	var tree := get_tree()
 	var root := tree.root
+	var nm = root.get_node_or_null("NetworkManager")
+	if nm:
+		nm.call("send_custom_event", "terminal_entered", {"zone": "COMPUTER_MINIGAME"})
 	var menu: Node = (load("res://scenes/Main.tscn") as PackedScene).instantiate()
 	cached_world = self
 	root.remove_child(self)
@@ -2467,8 +2520,8 @@ func _build_title_modal(canvas: CanvasLayer) -> void:
 	right_card.anchor_right = 1.0
 	right_card.anchor_top = 0.5
 	right_card.anchor_bottom = 0.5
-	var card_w: float = 380.0
-	var card_h: float = 430.0
+	var card_w: float = 410.0
+	var card_h: float = 445.0
 	right_card.offset_right = -44.0
 	right_card.offset_left = -44.0 - card_w
 	right_card.offset_top = -card_h * 0.5 + 20.0
@@ -3343,6 +3396,19 @@ func _process(delta: float) -> void:
 	if player == null:
 		return
 
+	# Queue crates movement
+	var lane := _queue_lane()
+	var lane_axis := (lane[1] - lane[0]).normalized()
+	var lane_length := lane[0].distance_to(lane[1])
+	for cr in queue_crates:
+		if is_instance_valid(cr):
+			cr.global_position += lane_axis * delta * 0.65
+			var progress := (cr.global_position - lane[0]).dot(lane_axis)
+			if progress > lane_length: progress = 0.0
+			var aligned := lane[0] + lane_axis * clampf(progress, 0.0, lane_length)
+			aligned.y = _queue_support_height(aligned)
+			cr.global_position = aligned
+
 	# 월드 투어 시네마틱 카메라 (타이틀/로비 상태)
 	if game_state == GameState.TITLE_LOGIN or game_state == GameState.DIFFICULTY_SELECT:
 		if not _tour_paused:
@@ -3440,18 +3506,6 @@ func _process(delta: float) -> void:
 		if _msg_time <= 0.0:
 			msg_label.text = ""
 
-	# Queue crates movement
-	var lane := _queue_lane()
-	var lane_axis := (lane[1] - lane[0]).normalized()
-	var lane_length := lane[0].distance_to(lane[1])
-	for cr in queue_crates:
-		if is_instance_valid(cr):
-			cr.global_position += lane_axis * delta * 0.65
-			var progress := (cr.global_position - lane[0]).dot(lane_axis)
-			if progress > lane_length: progress = 0.0
-			var aligned := lane[0] + lane_axis * clampf(progress, 0.0, lane_length)
-			aligned.y = _queue_support_height(aligned)
-			cr.global_position = aligned
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _basics_open():

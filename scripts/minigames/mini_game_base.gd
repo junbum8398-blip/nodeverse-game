@@ -79,6 +79,13 @@ func start_level(n: int) -> void:
 		tut_open = true
 		_tut_seen = true
 	say("레벨 %d / %d 시작!" % [n + 1, level_count], C_GOLD)
+	
+	# Telemetry: Task and Attempt Start
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		if n == 0:
+			nm.call("start_task", stage_id, {"title": stage_title, "goal": goal, "total_levels": level_count})
+		nm.call("start_attempt", stage_id, n + 1, {"goal": goal})
 
 func _process(delta: float) -> void:
 	time += delta
@@ -101,6 +108,9 @@ func undo() -> void:
 	set_state(_undo.pop_back())
 	moves = max(0, moves - 1)
 	say("되돌렸습니다.", C_WHITE)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "undo", true, "", {}, {}, {"moves": moves})
 
 func say(t: String, c := C_WHITE, dur := 2.6) -> void:
 	_msg = t
@@ -112,11 +122,17 @@ func wrong(t: String, key = null) -> void:
 	say("✗ " + t, C_RED, 3.2)
 	if key != null:
 		_flash[key] = 0.6
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "wrong_move", false, t, {}, {}, {"mistakes": mistakes, "moves": moves, "stage": stage_id})
 
 func good(t: String, key = null) -> void:
 	say("✓ " + t, C_GREEN)
 	if key != null:
 		_flash[key] = 0.5
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "good_move", true, "", {}, {}, {"mistakes": mistakes, "moves": moves, "stage": stage_id})
 
 func flashing(key) -> bool:
 	return _flash.has(key)
@@ -127,9 +143,14 @@ func stars() -> int:
 func win(t: String) -> void:
 	level_done = true
 	say("★ " + t, C_GOLD, 6.0)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("complete_attempt", stage_id, true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": stars(), "time": time})
 	if level >= level_count - 1:
 		all_done = true
 		cleared[stage_id] = max(int(cleared.get(stage_id, 0)), stars())
+		if nm:
+			nm.call("complete_task", stage_id, {"stage_id": stage_id, "moves": moves, "mistakes": mistakes, "stars": stars(), "time": time})
 
 func next_level() -> void:
 	if level < level_count - 1:
