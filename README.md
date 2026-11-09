@@ -1,4 +1,16 @@
-# NODEVERSE 연결섬 — Godot 4.7 3D 프로젝트
+# 🌐 NODEVERSE — 연결된 배움의 세계 (Nodeverse Game)
+
+[![Godot Engine](https://img.shields.io/badge/Godot-v4.7.2-478cbf?style=for-the-badge&logo=godotengine&logoColor=white)](https://godotengine.org)
+[![Python](https://img.shields.io/badge/Python-3.13-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Telemetry-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Status](https://img.shields.io/badge/Telemetry-Active-brightgreen?style=for-the-badge)](#실시간-학습-데이터-파이프라인-아키텍처)
+
+> **"배움이 모험이 되는 작은 세계"**  
+> 7개의 연결된 3D 메타버스 섬과 10가지 2D 자료구조 도트 미니게임을 탐험하며,  
+> 비동기 실시간 텔레메트리 파이프라인으로 학습 데이터를 수집·분석하는 교육용 게임 플랫폼입니다.
+
+---
+
 
 `reference/NODEVERSE_연결섬_전체지도.png`를 기준으로 4개 섬을 다리로 연결한 플레이 가능한 3D 월드와,
 그 월드를 구성하는 모듈형 3D 에셋 70종(GLB + TSCN)을 담은 프로젝트입니다.
@@ -46,6 +58,65 @@ python tools/write_stage_scenes.py      # ST02~ST10 씬 생성 (걷는 영역, �
 Godot_v4.7.2-stable_win64_console.exe --path . --resolution 1280x720 res://scenes/AutoplayStages.tscn   # 전 스테이지 자동 플레이 검증
 ```
 
+
+
+## 📡 실시간 학습 데이터 파이프라인 아키텍처
+
+NODEVERSE는 게임 내 모든 플레이어의 조작(시작, 블록 이동, 실수, 되돌리기, 클리어 등)을 비동기 표준 스키마 이벤트로 수집하여 분석 서버로 전송합니다.
+
+```mermaid
+flowchart LR
+    subgraph Client ["Godot 4.7 Game Client"]
+        A["3D World & 10 Mini-Games"] --> B["NetworkManager (Autoload)"]
+        B --> C["Async HTTPRequest (3s Timeout)"]
+        B -.-> D["Offline Safe Mode (Zero-Crash)"]
+        B --> E["F6 In-Game Debug HUD"]
+    end
+
+    subgraph Backend ["FastAPI Ingestion Server"]
+        F["POST /v1/events (Port 8000)"]
+        G["Pydantic v2 Schema Validation"]
+        F --> G
+    end
+
+    subgraph Analytics ["Real-Time Dashboard"]
+        H["Web Monitoring UI (Port 8010)"]
+        I["Mistake Heatmap & Time Analysis"]
+        H --> I
+    end
+
+    C -->|"HTTP/1.1 POST (X-API-Key)"| F
+    G -->|"Real-time Aggregation"| H
+```
+
+### 🛡️ 주요 기술적 특징
+1. **완전 비동기 논블로킹 (Async Non-Blocking)**:
+   - Godot의 `HTTPRequest` 노드를 통해 백그라운드 소켓 통신을 수행하여 60 FPS 화면 렌더링과 플레이어 조작(WASD/E)을 0.001초도 방해하지 않습니다.
+2. **오프라인 무중단 안전 모드 (Zero-Crash Fallback)**:
+   - 서버 접속 불가, 인터넷 끊김, HTTP 에러(401/422/500) 상황에서도 게임이 튕기거나 멈추지 않고 내부 오프라인 큐로 전환되어 100% 정상 플레이가 보장됩니다.
+3. **3초 타임아웃 방어 (Timeout Protection)**:
+   - 응답이 지연되는 네트워크 환경에서도 3초 내에 자동으로 연결 시도를 정리하여 리소스 누수를 차단합니다.
+4. **인게임 F6 실시간 디버그 패널**:
+   - 게임 플레이 중 `F6` 단축키를 눌러 전송 패킷, RTT 지연시간(Latency ms), 서버 연결 상태를 실시간 모니터링할 수 있습니다.
+
+---
+
+## 🎮 10종 자료구조 도트 미니게임 라인업
+
+| ID | 스테이지명 | 자료구조 | 핵심 개념 및 조작 |
+|:---:|:---|:---:|:---|
+| **ST01** | 순서가 있는 보관소 | **배열 (Array)** | O(1) 인덱스 접근, 연속 메모리 상자 이동 및 삭제 |
+| **ST02** | 끊어진 운송로 | **연결 리스트 (Linked List)** | 포인터 케이블 연결, HEAD 이동, 노드 순회 |
+| **ST03** | 최근 작업 복구실 | **스택 (Stack)** | LIFO 후입선출, PUSH/POP 및 되돌리기(Undo) 스택 |
+| **ST04** | 접수 순서 안내소 | **큐 / 덱 (Queue / Deque)** | FIFO 선입선출, FRONT/REAR 게이트, 양방향 덱 |
+| **ST05** | 이름으로 찾는 물품대장 | **해시 테이블 (Hash Table)** | Key-Value 매핑, 해시 함수 버킷, 충돌 체이닝 |
+| **ST06** | 계층형 자료실 | **이진 트리 (Binary Tree)** | Root/Leaf 계층 노드 탐색 및 트리 순회(Traversal) |
+| **ST07** | 갈림길 창고 | **이진 탐색 트리 (BST)** | 좌소우대(Left<Root<Right) 규칙, O(log N) 빠른 탐색 |
+| **ST08** | 긴급 작업 배정실 | **힙 & 우선순위 큐 (Heap)** | 최대/최소 힙, 긴급 작업 우선 배정, Heapify 재구조화 |
+| **ST09** | 연결망 조사실 | **그래프 (Graph)** | 정점(Vertex)과 간선(Edge), 네트워크 최단 경로 탐색 |
+| **ST10** | 학습 지원 센터 | **통합 실전 (Integrated)** | 복합 자료구조 조합 및 최적 성능 알고리즘 문제 해결 |
+
+---
 ## 폴더 구조
 
 ```

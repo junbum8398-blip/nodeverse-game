@@ -227,13 +227,15 @@ func send_custom_event(event_type: String, data: Dictionary = {}) -> void:
 	_dispatch_event(ev)
 
 func _create_event(event_type: String, details: Dictionary = {}) -> Dictionary:
+	if session_id.is_empty():
+		_init_session()
 	var ev := {
 		"schema_version": 1,
 		"event_id": generate_uuid_v4(),
-		"player_id": player_id,
+		"player_id": player_id if not player_id.is_empty() else "local_player",
 		"session_id": session_id,
 		"run_id": current_run_id if not current_run_id.is_empty() else generate_uuid_v4(),
-		"problem_id": current_task_id,
+		"problem_id": current_task_id if not current_task_id.is_empty() else "default_stage",
 		"attempt_id": current_attempt_id if not current_attempt_id.is_empty() else generate_uuid_v4(),
 		"event_type": event_type,
 		"occurred_at": get_iso_timestamp(),
@@ -272,6 +274,12 @@ func _try_flush_queue() -> void:
 	_request_start_time = Time.get_ticks_msec()
 	_set_status(NetStatus.SENDING, "전송 중: %s" % _active_request_type)
 	
+	if _http_request == null:
+		_http_request = HTTPRequest.new()
+		_http_request.name = "TelemetryHTTP"
+		_http_request.timeout = request_timeout
+		_http_request.request_completed.connect(_on_http_request_completed)
+		add_child(_http_request)
 	var url := get_full_url()
 	var err := _http_request.request(url, headers, HTTPClient.METHOD_POST, json_str)
 	if err != OK:

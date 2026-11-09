@@ -115,6 +115,10 @@ func start_level(n: int) -> void:
 	rebuild()
 	refresh()
 	hud.toast("레벨 %d / %d : %s" % [n + 1, level_count, goal_text], StageHUD.GOLD)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		if n == 0:
+			nm.call("start_attempt", stage_id, n + 1, {"goal": goal_text})
 	if n != _talked_level:
 		_talked_level = n
 		if n == 0 and not intro_seen.get(stage_id, false):
@@ -149,6 +153,9 @@ func set_goal(t: String) -> void:
 func wrong(msg: String) -> void:
 	mistakes += 1
 	hud.toast("✗ " + msg, StageHUD.RED, 3.0)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "wrong_move", false, msg, {}, {}, {"mistakes": mistakes, "moves": moves, "stage": stage_id})
 	var tw := create_tween()
 	for k in 3:
 		tw.tween_property(player.sprite, "position:x", 6.0, 0.04)
@@ -157,6 +164,9 @@ func wrong(msg: String) -> void:
 
 func good(msg: String) -> void:
 	hud.toast("✓ " + msg, StageHUD.GREEN)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "good_move", true, msg, {}, {}, {"mistakes": mistakes, "moves": moves, "stage": stage_id})
 
 func stars() -> int:
 	return 3 if mistakes == 0 else (2 if mistakes <= 2 else 1)
@@ -169,6 +179,9 @@ func win(detail: String) -> void:
 	var last := level >= level_count - 1
 	var s := stars()
 	hud.show_clear("스테이지 클리어!" if last else "레벨 %d 클리어!" % (level + 1), s, detail, last)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("complete_attempt", stage_id, true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": s, "is_stage_clear": last})
 	if last:
 		MiniGameBase.cleared[stage_id] = maxi(int(MiniGameBase.cleared.get(stage_id, 0)), s)
 
@@ -186,6 +199,9 @@ func undo_last() -> void:
 	rebuild()
 	refresh()
 	hud.toast("되돌렸어요.")
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("record_operation", "undo", true, "", {}, {}, {"moves": moves, "stage": stage_id})
 
 # ---------- 물건 관리 ----------
 ## want: 아이디 -> {"text", "pos", "scale"(선택), "color"(선택, 있으면 토큰), "z"(선택)}.

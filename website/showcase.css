@@ -1,0 +1,174 @@
+/* ==========================================================
+   NODEVERSE 10-Stage Showcase & System Architecture Styles
+   ========================================================== */
+
+/* ---------- STAGES SECTION ---------- */
+.stages-section {
+  background: #fdfdf9;
+  border-top: 1px solid #e3e8dc;
+  border-bottom: 1px solid #e3e8dc;
+}
+
+.stage-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.stage-filter-btn {
+  padding: 10px 18px;
+  border: 1px solid #d4ded1;
+  background: #fff;
+  color: #2b524c;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.stage-filter-btn:hover {
+  background: #f0f5eb;
+  border-color: #9cb5a6;
+}
+
+.stage-filter-btn.active {
+  background: #173d42;
+  color: #fff;
+  border-color: #173d42;
+  box-shadow: 0 4px 12px rgba(23, 61, 66, 0.18);
+}
+
+/* Stage Cards Grid */
+.stages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 24px;
+}
+
+.stage-card {
+  background: #fff;
+  border: 1px solid #e1e7db;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.stage-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px rgba(18, 56, 52, 0.1);
+  border-color: #8bb0a4;
+}
+
+.stage-card-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #122a2e;
+  overflow: hidden;
+}
+
+.stage-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  transition: transform 0.3s ease;
+}
+
+.stage-card:hover .stage-card-thumb img {
+  transform: scale(1.05);
+}
+
+.stage-id-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(18, 42, 46, 0.88);
+  color: #f7d582;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  border: 1px solid rgba(247, 213, 130, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.stage-cat-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #173d42;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.stage-card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.stage-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.stage-card-header h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #173d42;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.npc-mini-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid #e1d2a4;
+  object-fit: cover;
+  background: #f7edd2;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+
+.stage-desc {
+  font-size: 12.5px;
+  color: #556b66;
+  line-height: 1.6;
+  margin: 0 0 16px;
+  flex-grow: 1;
+}
+
+.stage-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-top: 1px dashed #e8eee5;
+  padding-top: 14px;
+}
+
+.stage-pill {
+  font-size: 10.5px;
+  color: #3b6b61;
+  background: #f0f7f3;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  border: 1px solid #d4e8de;
+}
+
