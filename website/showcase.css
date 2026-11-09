@@ -350,21 +350,7 @@
   animation: shadow-breathe 3s ease-in-out infinite;
 }
 
-.robot-click-hint {
-  position: absolute;
-  top: 4px;
-  right: -6px;
-  background: #e6a73c;
-  color: #173d42;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 3px 7px;
-  border-radius: 12px;
-  border: 1.5px solid #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
-  animation: pulse-hint 2s infinite;
-  letter-spacing: 0.5px;
-}
+
 
 /* Keyframe Animations */
 @keyframes robot-float {
@@ -384,8 +370,7 @@
   100% { transform: scale(1) rotate(0deg); }
 }
 
-@keyframes pulse-hint {
-  0%, 100% { transform: scale(1); }
+
   50% { transform: scale(1.1); box-shadow: 0 4px 12px rgba(230, 167, 60, 0.5); }
 }
 
