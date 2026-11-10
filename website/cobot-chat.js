@@ -633,22 +633,7 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
       `;
     }
 
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('openCobot') === '1') {
-        openChat();
-        const autoQ = params.get('q') || '📥 게임 다운로드 & 실행 방법 알려줘';
-        setTimeout(() => {
-          if (chatInput) {
-            chatInput.value = autoQ;
-            handleSend();
-          }
-        }, 150);
-      } else if (params.get('openCobotSettings') === '1') {
-        openChat();
-        if (settingsDrawer) settingsDrawer.classList.add('active');
-      }
-    } catch (_) {}
+    
   }
 
   if (document.readyState === 'loading') {
