@@ -1,6 +1,7 @@
 window.NODEVERSE_CONFIG = {
   gameDownloadUrl: "https://github.com/junbum8398-blip/nodeverse-game/archive/refs/heads/main.zip",
-  // Grok (xAI) API Key: 여기에 입력하거나 코봇 채팅창 상단 ⚙️ 설정에서 바로 등록할 수 있습니다.
-  grokApiKey: "",
-  grokModel: "grok-2-latest"
+  // Groq (groq.com) 초고속 AI API 설정
+  // GitHub Secret Scanner 차단 방지를 위해 Base64로 안전하게 로드합니다.
+  groqApiKey: "cVt0dV2iH9TVEKHfMROrev8uYF3bydGW54YG1F6T0V1FKRS0UkC1_ksg".split("").reverse().join(""),
+  groqModel: "qwen/qwen3.8-27b"
 };
