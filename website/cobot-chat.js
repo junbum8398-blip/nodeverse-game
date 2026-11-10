@@ -326,7 +326,7 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
             <div class="cobot-header-meta">
               <div class="cobot-header-title">
                 <span>코봇 (Cobot)</span>
-                <span class="cobot-status-pill" id="cobot-status-pill">🟢 Groq AI 탑재</span>
+                
               </div>
               <span class="cobot-header-sub">NODEVERSE 공식 AI 도우미</span>
             </div>
@@ -383,7 +383,7 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
             <button type="button" class="cobot-send-btn" id="cobot-send" title="전송">➤</button>
           </div>
           <div class="cobot-footer-tag">
-            <span>⚡ Powered by Groq AI & NODEVERSE Engine</span>
+            <span>⚡ NODEVERSE 공식 가이드</span>
           </div>
         </div>
       `;
@@ -397,7 +397,7 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
     const messagesEl = document.getElementById('cobot-messages');
     const closeBtn = document.getElementById('cobot-btn-close');
     const clearBtn = document.getElementById('cobot-btn-clear');
-    const statusPill = document.getElementById('cobot-status-pill');
+    
 // Toggle Chat Window
     function openChat() {
       chatWindow.classList.add('open');

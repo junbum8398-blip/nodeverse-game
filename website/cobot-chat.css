@@ -78,6 +78,7 @@
 }
 
 .cobot-status-pill {
+  display: none !important;
   font-size: 10px;
   font-weight: 700;
   background: rgba(95, 214, 255, 0.2);

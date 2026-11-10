@@ -309,7 +309,7 @@
   margin-top: 4px;
 }
 
-/* Robot Avatar Button */
+/* Robot Avatar Button & Floating Animation */
 .robot-avatar-wrapper {
   position: relative;
   width: 72px;
@@ -317,6 +317,7 @@
   cursor: pointer;
   user-select: none;
   outline: none;
+  z-index: 999;
 }
 
 .robot-avatar-img {
@@ -325,14 +326,14 @@
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.28));
-  animation: robot-float 3s ease-in-out infinite;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.32));
+  animation: robot-hover-float 2.6s ease-in-out infinite;
   transform-origin: center bottom;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: filter 0.25s ease;
 }
 
 .robot-avatar-wrapper:hover .robot-avatar-img {
-  transform: scale(1.08);
+  filter: drop-shadow(0 14px 24px rgba(78, 230, 180, 0.55)) brightness(1.06);
 }
 
 .robot-avatar-wrapper.robot-clicked .robot-avatar-img {
@@ -344,24 +345,39 @@
   bottom: 0px;
   left: 50%;
   transform: translateX(-50%);
-  width: 46px;
+  width: 52px;
   height: 12px;
-  background: radial-gradient(ellipse at center, rgba(18, 42, 46, 0.45) 0%, transparent 72%);
+  background: radial-gradient(ellipse at center, rgba(14, 42, 38, 0.52) 0%, transparent 72%);
   border-radius: 50%;
-  animation: shadow-breathe 3s ease-in-out infinite;
+  animation: shadow-float-sync 2.6s ease-in-out infinite;
+  pointer-events: none;
 }
-
-
 
 /* Keyframe Animations */
-@keyframes robot-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(1.5deg); }
+@keyframes robot-hover-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-7px) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-7px) rotate(1.5deg);
+  }
 }
 
-@keyframes shadow-breathe {
-  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.4; }
-  50% { transform: translateX(-50%) scale(0.75); opacity: 0.18; }
+@keyframes shadow-float-sync {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateX(-50%) scale(0.62);
+    opacity: 0.2;
+  }
 }
 
 @keyframes robot-bounce {
@@ -369,10 +385,6 @@
   30% { transform: scale(1.22) rotate(-8deg); }
   60% { transform: scale(0.92) rotate(4deg); }
   100% { transform: scale(1) rotate(0deg); }
-}
-
-
-  50% { transform: scale(1.1); box-shadow: 0 4px 12px rgba(230, 167, 60, 0.5); }
 }
 
 @keyframes bubble-pop {
