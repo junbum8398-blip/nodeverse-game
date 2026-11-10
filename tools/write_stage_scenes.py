@@ -205,7 +205,7 @@ def build_walls(cfg, sid):
     loops = [simplify(l, 1.4) for l in trace_loops(mask)]
     loops = [l for l in loops if len(l) >= 3]
     # 확인 그림
-    prev = Image.open(f"textures/stages/{sid}/bg_game.png").convert("RGB").copy()
+    prev = Image.open(f"textures/stages/{cfg.get('art', sid)}/bg_game.png").convert("RGB").copy()
     d = ImageDraw.Draw(prev, "RGBA")
     for l in loops:
         d.line([(x * CELL, y * CELL) for x, y in l + [l[0]]], fill=(255, 0, 255, 255), width=3)
@@ -273,8 +273,8 @@ horizontal_alignment = 1
     npc_id, npc_name = cfg["npc"]
     write(f"scenes/stages/{cfg['scene']}.tscn", f'''[gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/play/{cfg['script']}.gd" id="1"]
-[ext_resource type="Texture2D" path="res://textures/stages/{sid}/bg_game.png" id="2"]
+[ext_resource type="Script" path="{cfg.get('script_res', 'res://scripts/play/' + cfg['script'] + '.gd')}" id="1"]
+[ext_resource type="Texture2D" path="res://textures/stages/{cfg.get('art', sid)}/bg_game.png" id="2"]
 [ext_resource type="Script" path="res://scripts/play/interactable.gd" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/play/Player.tscn" id="4"]
 [ext_resource type="Script" path="res://scripts/play/stage_hud.gd" id="5"]
@@ -299,7 +299,7 @@ outline_size = 5
 outline_color = Color(0.114, 0.106, 0.165, 1)
 
 [node name="{cfg['scene']}" type="Node2D"]
-script = ExtResource("1")
+script = ExtResource("1"){chr(10) + 'activity = "' + cfg['activity'] + '"' if 'activity' in cfg else ''}
 
 [node name="Backdrop" type="ColorRect" parent="."]
 offset_right = 1280.0

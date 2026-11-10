@@ -6,7 +6,9 @@ const KEYS := ["A", "B", "C", "D", "E"]
 const EDGES := [["A", "B"], ["A", "C"], ["B", "D"], ["C", "D"], ["D", "E"]]
 const LEVELS := [
 	{"start": "A", "algo": "BFS"}, {"start": "A", "algo": "DFS"}, {"start": "D", "algo": "BFS"}, {"start": "C", "algo": "DFS"},
+	{"start": "A", "algo": "BFS", "cut": true},
 ]
+const CUT_EDGE := ["D", "E"]   # 단절 레벨에서 끊어진 길
 
 var algo := "BFS"
 var start := "A"
@@ -36,16 +38,22 @@ func _init() -> void:
 		"A에서 BFS 조사를 시작하자. A의 이웃 B, C가 먼저, 그다음이 그들의 이웃이야.",
 		"이번엔 A에서 DFS야. B로 들어가서 갈 수 있는 데까지 쭉 가 봐. 막히면 돌아와서 안 가 본 쪽으로!",
 		"출발점을 D로 바꿔 볼게. D에서 BFS면 이웃 B, C, E가 먼저겠지?",
-		"마지막! C에서 DFS 조사. 이웃은 알파벳 순이니까 A부터 들어가 봐.",
+		"C에서 DFS 조사. 이웃은 알파벳 순이니까 A부터 들어가 봐.",
+		"마지막! D와 E 사이 길이 끊겼어. A에서 BFS로 갈 수 있는 집만 조사하면 돼. E는 도달할 수 없으니 탐색이 끝나도 방문하지 않는 거야.",
 	]
 
 func build_stage() -> void:
 	stamps = Node2D.new()
 	overlay.add_child(stamps)
+
+func _active_edges() -> Array:
+	return EDGES.filter(func(e): return not (LEVELS[level].get("cut", false) and e == CUT_EDGE))
+
+func _build_adj() -> void:
 	adj = {}
 	for k in KEYS:
 		adj[k] = []
-	for e in EDGES:
+	for e in _active_edges():
 		adj[e[0]].append(e[1])
 		adj[e[1]].append(e[0])
 	for k in adj:
@@ -53,6 +61,7 @@ func build_stage() -> void:
 
 func setup_level(n: int) -> void:
 	var L: Dictionary = LEVELS[n]
+	_build_adj()
 	algo = L.algo
 	start = L.start
 	goal_text = "%s로 %s부터, 이웃은 알파벳 순으로 조사" % [algo, start]
@@ -102,7 +111,7 @@ func rebuild() -> void:
 		text_at(str(i + 1), r.position + Vector2(0, -60), 30, StageHUD.GOLD, 7, stamps)
 		lit[visited[i]] = true
 	clear_children(links)
-	for e in EDGES:
+	for e in _active_edges():
 		if lit.has(e[0]) and lit.has(e[1]):
 			link(spot("house", KEYS.find(e[0])).position, spot("house", KEYS.find(e[1])).position, C_LINK, 0.0)
 	var want := {}

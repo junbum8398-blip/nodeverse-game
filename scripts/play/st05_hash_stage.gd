@@ -8,6 +8,8 @@ const LEVELS := [
 	{"items": [[12, "포도"], [7, "배"], [3, "사과"], [10, "귤"]], "find": [7, 12], "goal": "h(k) = k mod 5 로 넣고 찾기"},
 	{"items": [[21, "감"], [6, "밤"], [11, "무"], [6, "밤"], [14, "콩"], [9, "쌀"]], "find": [11, 9, 6], "goal": "충돌과 중복 키를 처리하며 넣고 찾기"},
 	{"items": [[25, "책"], [40, "펜"], [33, "컵"], [18, "솔"], [25, "책"], [8, "끈"], [13, "못"]], "find": [13, 40, 18], "goal": "긴 체인이 생겨도 정확히 찾기"},
+	{"items": [[7, "배"], [12, "감"], [7, "귤"]], "find": [7], "update": true, "goal": "같은 키가 또 오면 값만 바꾸기 (맵)"},
+	{"items": [[7, "배"], [12, "감"], [2, "콩"], [9, "쌀"]], "find": [2, 4], "linear": true, "goal": "선형 탐사: 충돌하면 다음 빈 칸에 넣기"},
 ]
 
 var buckets: Array = []
@@ -38,7 +40,9 @@ func _init() -> void:
 	level_talk = [
 		"첫 번째 장부예요. 12, 7, 3, 10을 각각 맞는 사물함에 넣어 주세요. 다 넣으면 7과 12를 찾아 볼게요.",
 		"이번엔 충돌이 많아요. 21, 6, 11은 나머지가 다 1이에요! 두 번째로 오는 6은 이미 있으니 중복 거절함으로 보내 주세요.",
-		"마지막 장부예요. 3번 사물함에 체인이 길게 달릴 거예요. 체인이 길어지면 찾는 데 오래 걸린다는 걸 느껴 보세요.",
+		"3번 사물함에 체인이 길게 달릴 거예요. 체인이 길어지면 찾는 데 오래 걸린다는 걸 느껴 보세요.",
+		"이번 장부는 키에 값을 붙이는 '맵'이에요. 같은 키 7이 다시 오면 거절하지 말고, 그 키가 있는 사물함에 넣어 값만 바꿔 주세요.",
+		"마지막은 '선형 탐사'예요. 사물함 한 칸에 하나만 넣을 수 있어요. 자리가 차 있으면 다음 칸으로 넘어가요. 찾을 때도 같은 길을 따라가고, 빈 칸을 만나면 없는 키예요.",
 	]
 
 func build_stage() -> void:
@@ -76,18 +80,30 @@ func count() -> int:
 		n += b.size()
 	return n
 
+func is_linear() -> bool:
+	return LEVELS[level].get("linear", false)
+
 func has_key(k: int) -> bool:
-	for it in buckets[k % M]:
-		if it[0] == k:
-			return true
+	for b in (range(M) if is_linear() else [k % M]):
+		for it in buckets[b]:
+			if it[0] == k:
+				return true
 	return false
+
+## 선형 탐사로 키 k 가 들어갈 칸. 한 바퀴를 돌아도 자리가 없으면 -1.
+func probe_slot(k: int) -> int:
+	for step_n in M:
+		var b: int = (k + step_n) % M
+		if buckets[b].is_empty():
+			return b
+	return -1
 
 func rebuild() -> void:
 	var want := {}
 	for b in M:
 		for i in buckets[b].size():
 			var it = buckets[b][i]
-			var hidden: bool = phase == "find" and open_b != b
+			var hidden: bool = phase == "find" and open_b != b and not is_linear()
 			var col := Color("f2c14e")
 			if open_b == b and i == probe:
 				col = Color("6fd3ff")
@@ -124,7 +140,7 @@ func _cur_text() -> String:
 	return "키 %d 찾기" % finds[0] if not finds.is_empty() else "-"
 
 func info_rows() -> Array:
-	return [["단계", "넣기" if phase == "insert" else "찾기"], ["현재", _cur_text()], ["항목", count()], ["해시", "k mod 5"]]
+	return [["단계", "넣기" if phase == "insert" else "찾기"], ["현재", _cur_text()], ["항목", count()], ["충돌 처리", "선형 탐사" if is_linear() else "체이닝"]]
 
 func state_text() -> String:
 	var t := ""
@@ -172,6 +188,8 @@ func interact(t: Interactable) -> void:
 		"dup":
 			if hand == null:
 				wrong("먼저 입고대에서 물품을 집어 오세요.")
+			elif LEVELS[level].get("update", false):
+				wrong("이번 장부는 맵이에요. 같은 키는 거절하지 말고 값을 바꿔요.")
 			elif not has_key(hand[0]):
 				wrong("키 %d 는 아직 없는 키예요. 사물함에 넣어 주세요." % hand[0])
 			else:
@@ -194,14 +212,33 @@ func _insert(b: int) -> void:
 		return
 	var k: int = hand[0]
 	if has_key(k):
-		wrong("키 %d 는 이미 등록돼 있어요. 중복 거절함으로 보내세요." % k)
+		if not LEVELS[level].get("update", false):
+			wrong("키 %d 는 이미 등록돼 있어요. 중복 거절함으로 보내세요." % k)
+			return
+		if b != k % M:
+			wrong("%d mod 5 = %d 이에요. 그 칸에 있는 키의 값을 바꿔요." % [k, k % M])
+			return
+		snapshot()
+		for it in buckets[b]:
+			if it[0] == k:
+				code("table.put(%d);" % k, "%s → %s" % [it[1], hand[1]])
+				it[1] = hand[1]
+		good("키 %d 의 값을 %s(으)로 바꿨어요. 항목 수는 그대로예요." % [k, hand[1]])
+		hand = null
+		moves += 1
+		_after_insert()
 		return
-	if b != k % M:
+	if is_linear():
+		var slot := probe_slot(k)
+		if b != slot:
+			wrong("h(%d) = %d 부터 차례로 보면 첫 빈 칸은 %d번이에요." % [k, k % M, slot])
+			return
+	elif b != k % M:
 		wrong("%d mod 5 = %d 이에요. %d번이 아니에요." % [k, k % M, b])
 		return
 	snapshot()
 	buckets[b].append(hand)
-	code("table[%d].add(%d);" % [b, k], hand[1] + (" (충돌)" if buckets[b].size() > 1 else ""))
+	code("table[%d].add(%d);" % [b, k], hand[1] + (" (충돌)" if buckets[b].size() > 1 or b != k % M else ""))
 	hand = null
 	moves += 1
 	_after_insert()
@@ -214,6 +251,9 @@ func _after_insert() -> void:
 
 func _find(b: int) -> void:
 	if finds.is_empty():
+		return
+	if is_linear():
+		_find_linear(b)
 		return
 	var key: int = finds[0]
 	if b != key % M:
@@ -244,6 +284,31 @@ func _find(b: int) -> void:
 	else:
 		set_goal("키 %d 찾기: 사물함을 열고 체인을 비교하세요" % finds[0])
 
+func _find_linear(b: int) -> void:
+	var key: int = finds[0]
+	var expected: int = open_b if open_b >= 0 else key % M
+	if b != expected:
+		wrong("선형 탐사는 %d mod 5 = %d번에서 시작해 한 칸씩 살펴요. 지금은 %d번 차례예요." % [key, key % M, expected])
+		return
+	snapshot()
+	moves += 1
+	if buckets[b].is_empty():
+		code("return null;", "빈 칸이면 없는 키")
+		good("%d번이 비어 있으니 키 %d 는 없어요." % [b, key])
+	elif buckets[b][0][0] == key:
+		code("return table[%d];" % b, "%d 찾음" % key)
+		good("%d번에서 키 %d 를 찾았어요." % [b, key])
+	else:
+		code("i = (i + 1) % 5;", "%d ≠ %d" % [buckets[b][0][0], key])
+		open_b = (b + 1) % M
+		return
+	finds.pop_front()
+	open_b = -1
+	if finds.is_empty():
+		win("등록과 탐사 검색 완료!\n실수 %d회" % mistakes)
+	else:
+		set_goal("키 %d 찾기: %d번부터 한 칸씩 비교하세요" % [finds[0], finds[0] % M])
+
 func summary_code() -> void:
 	code("")
 	code("// 키 → 칸 번호 계산 한 번으로")
@@ -254,10 +319,17 @@ func next_action() -> Array:
 		if hand == null:
 			return [spot("intake"), "물품 집기"] if not queue.is_empty() else [null, ""]
 		if has_key(hand[0]):
+			if LEVELS[level].get("update", false):
+				return [spot("bucket", hand[0] % M), "값 바꾸기"]
 			return [spot("dup"), "중복 거절"]
 		var b: int = hand[0] % M
+		if is_linear():
+			b = probe_slot(hand[0])
 		return [spot("bucket", b), "%d번 사물함에 넣기" % b]
 	if finds.is_empty():
 		return [null, ""]
+	if is_linear():
+		var slot: int = open_b if open_b >= 0 else finds[0] % M
+		return [spot("bucket", slot), "%d번 비교" % slot]
 	var b2: int = finds[0] % M
 	return [spot("bucket", b2), "사물함 열기" if open_b != b2 else "항목 비교"]

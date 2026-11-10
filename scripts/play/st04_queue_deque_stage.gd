@@ -7,11 +7,12 @@ const CAP := 4
 const LEVELS := [
 	{"mode": "queue", "line": ["A", "B", "C"], "arrive": ["D"], "target": ["A", "B"], "goal": "A를 창구로 보내고, 이어서 B도 보내기"},
 	{"mode": "queue", "line": ["A"], "arrive": ["B", "C", "D"], "target": ["A", "B", "C", "D"], "goal": "도착한 순서대로 모두 처리하기 (FIFO)"},
+	{"mode": "circular", "front": 1, "line": ["B", "C", "D"], "arrive": ["E"], "target": ["B", "C", "D", "E"], "goal": "원형 큐: rear가 0번으로 돌아오게 E 세우고 순서대로 처리"},
 	{"mode": "deque", "line": ["A", "B", "C"], "arrive": ["V"], "target": ["V", "A", "B", "C"], "goal": "긴급 손님 V를 가장 먼저 처리하기"},
 	{"mode": "deque", "line": ["A", "B", "C", "D"], "arrive": [], "target": ["D", "A", "B", "C"], "goal": "맨 뒤의 D 먼저, 그다음 A, B, C 처리하기"},
 	{"mode": "deque", "line": ["A"], "arrive": ["X", "Y"], "target": ["Y", "A", "X"], "goal": "처리 순서를 Y → A → X 로 만들기"},
 ]
-const COLORS := {"A": "e05252", "B": "e8a33d", "C": "4caf50", "D": "3d7bd9", "V": "c04fd8", "X": "2bb3a8", "Y": "d8577e"}
+const COLORS := {"A": "e05252", "B": "e8a33d", "C": "4caf50", "D": "3d7bd9", "E": "8f6adf", "V": "c04fd8", "X": "2bb3a8", "Y": "d8577e"}
 
 var mode := "queue"
 var line: Array = []
@@ -20,6 +21,7 @@ var served: Array = []
 var target: Array = []
 var hand = null
 var hand_from := ""     # "arrive" 또는 "line"
+var front_i := 0        # 원형 큐의 front 칸 번호 (rear 는 front + size - 1 을 CAP 으로 나눈 나머지)
 var mode_label: Label
 
 func _init() -> void:
@@ -40,6 +42,7 @@ func _init() -> void:
 	level_talk = [
 		"첫 번째 일이에요. 맨 앞의 A를 창구로 보내고, 그다음 B도 보내 주세요. 앞에서만 뺄 수 있다는 걸 기억하세요!",
 		"손님 A만 줄에 있고 B, C, D가 곧 도착해요. 뒤로 세우고 앞에서 빼면서 온 순서대로 처리해 주세요.",
+		"이번 줄은 원형 큐예요. 칸은 4개뿐이라 rear가 3번 끝에 닿으면 다시 0번으로 돌아와요. front, rear 번호와 size를 함께 봐야 빈 줄과 가득 찬 줄을 구분할 수 있어요. E를 세운 뒤 온 순서대로 처리해 주세요.",
 		"덱 모드예요! 긴급 손님 V를 줄의 맨 앞에 세워 가장 먼저 보내 주세요. FRONT 게이트로 데려가면 앞에 설 수 있어요.",
 		"이번엔 맨 뒤의 D가 제일 급해요. 덱은 뒤에서도 뺄 수 있답니다. REAR 게이트에서 D를 데려온 뒤, 나머지는 앞에서부터 보내 주세요.",
 		"마지막! X가 먼저, Y가 나중에 도착하는데 처리는 Y → A → X 순서예요. 어느 쪽 끝에 세워야 할지 생각해 보세요.",
@@ -57,11 +60,12 @@ func setup_level(n: int) -> void:
 	target = L.target
 	hand = null
 	hand_from = ""
+	front_i = int(L.get("front", 0))
 	goal_text = L.goal
-	mode_label.text = "← 큐 모드 (대기열)" if mode == "queue" else "⇄ 덱 모드 (양쪽 끝)"
+	mode_label.text = {"queue": "← 큐 모드 (대기열)", "circular": "↻ 원형 큐 (칸 4개)", "deque": "⇄ 덱 모드 (양쪽 끝)"}[mode]
 
 func get_state() -> Dictionary:
-	return {"l": line, "a": arrive, "s": served, "h": hand, "f": hand_from}
+	return {"l": line, "a": arrive, "s": served, "h": hand, "f": hand_from, "i": front_i}
 
 func set_state(s: Dictionary) -> void:
 	line = s.l
@@ -69,6 +73,7 @@ func set_state(s: Dictionary) -> void:
 	served = s.s
 	hand = s.h
 	hand_from = s.f
+	front_i = s.i
 
 func _tok(who: String, p: Vector2, sc := 1.0) -> Dictionary:
 	return {"text": who, "pos": p, "scale": sc, "color": Color(COLORS.get(who, "888888"))}
@@ -76,7 +81,8 @@ func _tok(who: String, p: Vector2, sc := 1.0) -> Dictionary:
 func rebuild() -> void:
 	var want := {}
 	for i in line.size():
-		want[line[i]] = _tok(line[i], mark("Line%d" % i))
+		var cell: int = (front_i + i) % CAP if mode == "circular" else i
+		want[line[i]] = _tok(line[i], mark("Line%d" % cell))
 	for i in arrive.size():
 		want[arrive[i]] = _tok(arrive[i], mark("Arrive%d" % mini(i, 2)), 0.9)
 	for i in served.size():
@@ -85,7 +91,12 @@ func rebuild() -> void:
 		want[hand] = _tok(hand, hold_pos(), 0.9)
 	sync_items(want, hand)
 
+func _rear_i() -> int:
+	return (front_i + line.size() - 1 + CAP) % CAP
+
 func info_rows() -> Array:
+	if mode == "circular":
+		return [["모드", "원형 큐"], ["front 칸", front_i], ["rear 칸", "-" if line.is_empty() else str(_rear_i())], ["size", "%d / %d" % [line.size(), CAP]]]
 	return [["모드", "큐" if mode == "queue" else "덱"], ["앞 (Front)", "-" if line.is_empty() else line[0]], ["뒤 (Rear)", "-" if line.is_empty() else line.back()], ["처리", " ".join(served) if not served.is_empty() else "-"]]
 
 func state_text() -> String:
@@ -93,6 +104,8 @@ func state_text() -> String:
 	for v in line:
 		cells.append(v)
 	var t := "queue = [lb]%s[rb]\nsize = %s" % [", ".join(cells), num(line.size())]
+	if mode == "circular":
+		t += "\nfront = %s, rear = %s" % [num(front_i), num(_rear_i())]
 	if hand != null:
 		t += "\ntemp = %s" % hand
 	return t
@@ -150,7 +163,7 @@ func interact(t: Interactable) -> void:
 	rebuild()
 
 func _enqueue(front: bool) -> void:
-	if front and mode == "queue":
+	if front and mode != "deque":
 		wrong("큐는 앞에 세울 수 없어요. REAR 게이트로 가세요.")
 		return
 	if line.size() >= CAP:
@@ -160,6 +173,9 @@ func _enqueue(front: bool) -> void:
 	if front:
 		line.push_front(hand)
 		code_replace('deque.addFirst("%s");' % hand, "앞에 추가")
+	elif mode == "circular":
+		line.append(hand)
+		code_replace("rear = (rear + 1) % 4;", "칸 %d에 %s" % [_rear_i(), hand])
 	else:
 		line.append(hand)
 		code_replace('%s.addLast("%s");' % ["queue" if mode == "queue" else "deque", hand], "뒤에 추가")
@@ -168,7 +184,7 @@ func _enqueue(front: bool) -> void:
 	moves += 1
 
 func _dequeue(front: bool) -> void:
-	if not front and mode == "queue":
+	if not front and mode != "deque":
 		wrong("큐는 뒤에서 뺄 수 없어요. FRONT 게이트로 가세요.")
 		return
 	if line.is_empty():
@@ -182,7 +198,11 @@ func _dequeue(front: bool) -> void:
 	snapshot()
 	if front:
 		line.pop_front()
-		code('temp = %s;' % ("queue.pollFirst()" if mode == "queue" else "deque.pollFirst()"), "%s 빼기" % who)
+		if mode == "circular":
+			code("front = (front + 1) % 4;", "%s 빼기" % who)
+			front_i = (front_i + 1) % CAP
+		else:
+			code('temp = %s;' % ("queue.pollFirst()" if mode == "queue" else "deque.pollFirst()"), "%s 빼기" % who)
 	else:
 		line.pop_back()
 		code("temp = deque.pollLast();", "%s 빼기" % who)
@@ -202,6 +222,8 @@ func next_action() -> Array:
 		return [spot("rear"), "뒤에 세우기"]
 	if served.size() >= target.size():
 		return [null, ""]
+	if mode == "circular" and not arrive.is_empty() and line.size() < CAP:
+		return [spot("arrive"), "도착 손님 데려오기"]
 	var expect = target[served.size()]
 	if not line.is_empty() and line[0] == expect:
 		return [spot("front"), "%s 앞에서 빼기" % expect]

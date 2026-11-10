@@ -118,7 +118,8 @@ func start_level(n: int) -> void:
 	var nm = get_node_or_null("/root/NetworkManager")
 	if nm:
 		if n == 0:
-			nm.call("start_attempt", stage_id, n + 1, {"goal": goal_text})
+			nm.call("start_task", stage_id, {"title": stage_title, "goal": goal_text, "total_levels": level_count})
+		nm.call("start_attempt", stage_id, n + 1, {"goal": goal_text})
 	if n != _talked_level:
 		_talked_level = n
 		if n == 0 and not intro_seen.get(stage_id, false):
@@ -183,7 +184,9 @@ func win(detail: String) -> void:
 	if nm:
 		nm.call("complete_attempt", stage_id, true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": s, "is_stage_clear": last})
 	if last:
-		MiniGameBase.cleared[stage_id] = maxi(int(MiniGameBase.cleared.get(stage_id, 0)), s)
+		if nm:
+			nm.call("complete_task", stage_id, {"moves": moves, "mistakes": mistakes, "stars": s, "completed_levels": level_count})
+		MiniGameBase.record_clear(stage_id, s)
 
 # ---------- 되돌리기 ----------
 func snapshot() -> void:

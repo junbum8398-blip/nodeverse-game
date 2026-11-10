@@ -8,6 +8,10 @@ const SCENES := {"ST02": "ST02_LinkedList", "ST03": "ST03_Stack", "ST04": "ST04_
 var fails := 0
 
 func _ready() -> void:
+	MiniGameBase.progress_saving = false   # 자동 플레이가 실제 기록과 서버 집계를 건드리지 않게 한다
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.auto_send_enabled = false
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://renders/stages"))
 	var ig := FileAccess.open("res://renders/stages/.gdignore", FileAccess.WRITE)   # 캡처가 임포트되지 않게
 	if ig:

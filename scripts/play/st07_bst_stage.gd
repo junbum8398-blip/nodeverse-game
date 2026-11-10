@@ -8,6 +8,8 @@ const LEVELS := [
 	{"keys": [8, 4, 12, 2, 6, 10, null], "tasks": [["search", 10], ["search", 11]]},
 	{"keys": [8, 4, 12, 2, 6, 10, null], "tasks": [["insert", 14], ["search", 14], ["search", 3]]},
 	{"keys": [50, 30, 70, 20, 40, 60, null], "tasks": [["insert", 80], ["search", 40], ["search", 45]]},
+	{"keys": [8, 4, 12, 2, 6, 10, null], "tasks": [["insert", 6]]},
+	{"keys": [8, 4, null, 2, null, null, null], "tasks": [["search", 2], ["search", 9]]},
 ]
 
 var keys: Array = []
@@ -37,7 +39,9 @@ func _init() -> void:
 		"첫 임무다. 6을 찾아라. 8보다 작으니 왼쪽, 4보다 크니 오른쪽. 도착하면 6 발판에서 E로 '찾았다'를 선언해.",
 		"이번엔 10을 찾고, 11도 찾아라. 11은 트리에 없을 수도 있겠지? 더 내려갈 곳이 없으면 그 칸에서 '없음'을 선언해.",
 		"14를 넣어라! 12의 오른쪽 빈 발판이 그 자리다. 넣은 다음 찾아 보고, 3도 찾아라.",
-		"마지막이다. 값이 바뀌었으니 규칙대로 80을 넣고, 40과 45를 찾아라.",
+		"값이 바뀌었으니 규칙대로 80을 넣고, 40과 45를 찾아라.",
+		"6을 넣으라는 요청이다. 그런데 6은 이미 있지? 끝까지 내려가서 같은 값을 만나면 그 칸에서 E로 거부해라. BST에 같은 키는 두 번 넣지 않는다.",
+		"마지막이다. 한쪽으로만 길어진 트리를 봐라. 값이 3개뿐인데 2를 찾으려면 3번이나 비교해야 해. 균형이 깨지면 그만큼 느려지지.",
 	]
 
 func build_stage() -> void:
@@ -119,7 +123,7 @@ func prompt(t: Interactable) -> String:
 		return "발판"
 	if t.index == cur:
 		if task[1] == keys[cur]:
-			return "찾았다!"
+			return "중복이라 거부" if task[0] == "insert" else "찾았다!"
 		return "여기까지 (없음)" if not _has_child(_dir_child()) else "지금 칸"
 	if t.index >= 7 or keys[t.index] == null:
 		return "%d 넣기" % task[1] if task[0] == "insert" else "빈 자리"
@@ -140,6 +144,10 @@ func interact(t: Interactable) -> void:
 func _at_current(task, k: int, c: int) -> void:
 	if k == c:
 		snapshot()
+		if task[0] == "insert":
+			code("return;", "%d 은(는) 이미 있어 거부" % k)
+			_finish("%d 은(는) 이미 있어 넣지 않아요. (비교 %d회)" % [k, comps + 1])
+			return
 		code("return node;", "%d == %d" % [k, c])
 		_finish("%d 발견! (비교 %d회)" % [k, comps + 1])
 		return
@@ -197,7 +205,7 @@ func next_action() -> Array:
 	if t == null:
 		return [null, ""]
 	if t[1] == keys[cur]:
-		return [spot("pad", cur), "찾았다!"]
+		return [spot("pad", cur), "중복 거부" if t[0] == "insert" else "찾았다!"]
 	var ch := _dir_child()
 	if _has_child(ch):
 		return [spot("pad", ch), "%d 칸으로 이동" % keys[ch]]

@@ -1,5 +1,7 @@
 # 🌐 NODEVERSE — 연결된 배움의 세계 (Nodeverse Game)
 
+미니게임은 **자료구조·알고리즘·SQL·데이터 탐색**의 4개 분야, 23개 실습과 자료구조 종합 보너스 1개로 구성되어 있습니다. 현재 목록과 신규 실습 조작법은 [미니게임 가이드](MINIGAME_GUIDE.md)를 참고하세요.
+
 [![Godot Engine](https://img.shields.io/badge/Godot-v4.7.2-478cbf?style=for-the-badge&logo=godotengine&logoColor=white)](https://godotengine.org)
 [![Python](https://img.shields.io/badge/Python-3.13-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Telemetry-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)

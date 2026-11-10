@@ -4,10 +4,12 @@ extends WalkStage
 ## 꺼내기: 루트 상자를 들어 완료 접수대로 → 마지막 상자가 루트로 → 더 작은 자식 쪽 레버로 교환 반복.
 
 const LEVELS := [
+	{"heap": [1, 3, 2, 7, 4, 5], "tasks": [["slot", 1], ["slot", 4], ["parent", 4], ["parent", 2]]},
 	{"heap": [2, 5, 3, 9, 7], "tasks": [["insert", 1]]},
 	{"heap": [2, 4, 8, 9, 5], "tasks": [["insert", 3]]},
 	{"heap": [1, 3, 2, 7, 4, 5], "tasks": [["extract"]]},
 	{"heap": [2, 4, 3, 8, 5, 6], "tasks": [["extract"], ["insert", 1], ["extract"]]},
+	{"heap": [4], "tasks": [["extract"], ["insert", 2], ["insert", 2]]},
 ]
 
 var heap: Array = []
@@ -34,10 +36,12 @@ func _init() -> void:
 		"조작법! 입고에서 E로 상자를 집어 빈 받침대에 놓아. 받침대 사이 레버에서 E를 누르면 부모와 자식이 교환돼. 더 옮길 필요가 없으면 그 받침대에서 E로 멈춰. 막히면 노란 화살표를 따라가!",
 	]
 	level_talk = [
+		"먼저 받침대와 배열 번호를 맞춰 보자! 아래 레이어 순서의 번호가 트리의 어느 받침대인지 찾아가서 E를 눌러 줘. 부모는 (i-1)/2야.",
 		"작업 1번이 들어왔어! 맨 끝 빈자리에 놓고 부모와 비교해서 맨 위까지 올려 줘.",
 		"이번 작업은 3이야. 8보다 작으니 교환하지만, 부모 2보다는 크니까 거기서 멈춰야 해. 받침대에서 E로 멈추는 걸 잊지 마.",
 		"이제 꺼내기! 루트 상자를 들어 완료 접수대로 보내고, 올라온 상자를 더 작은 자식 쪽 레버로 내려 줘.",
-		"마지막 연속 작업이야. 꺼내고, 1을 넣고, 다시 꺼내기. 정신 바짝 차려!",
+		"연속 작업이야. 꺼내고, 1을 넣고, 다시 꺼내기. 정신 바짝 차려!",
+		"마지막! 작업이 하나뿐일 때 꺼내면 힙이 비어. 그다음 같은 우선순위 2를 두 번 넣어 봐. 부모와 같으면 교환하지 않고 멈추는 거야.",
 	]
 
 func build_stage() -> void:
@@ -61,6 +65,12 @@ func _begin() -> void:
 	if t[0] == "insert":
 		phase = "pick"
 		goal_text = "새 작업 %d 넣고 부모와 비교해 올리기" % t[1]
+	elif t[0] == "slot":
+		phase = "slot"
+		goal_text = "배열 인덱스 %d 번 값이 놓인 받침대 찾기" % t[1]
+	elif t[0] == "parent":
+		phase = "slot"
+		goal_text = "인덱스 %d 의 부모 받침대 찾기 ((i-1)/2)" % t[1]
 	else:
 		phase = "take"
 		goal_text = "가장 급한 작업(최솟값) 꺼내고 새 루트 내리기"
@@ -101,7 +111,7 @@ func _pop_two(a: int, b: int) -> void:
 			c.pop()
 
 func info_rows() -> Array:
-	var ph := {"pick": "새 상자 집기", "place": "빈자리에 놓기", "up": "위로 올리기", "take": "루트 꺼내기", "carry": "완료 접수대로", "down": "아래로 내리기", "": "-"}
+	var ph := {"slot": "받침대 찾기", "pick": "새 상자 집기", "place": "빈자리에 놓기", "up": "위로 올리기", "take": "루트 꺼내기", "carry": "완료 접수대로", "down": "아래로 내리기", "": "-"}
 	return [["단계", ph[phase]], ["최솟값", "-" if heap.is_empty() else heap[0]], ["크기", heap.size()], ["꺼낸 작업", " ".join(outbox.map(func(x): return str(x))) if not outbox.is_empty() else "-"]]
 
 func state_text() -> String:
@@ -133,8 +143,21 @@ func prompt(t: Interactable) -> String:
 			return "%d번 받침대" % t.index
 	return t.prompt
 
+func _slot_target() -> int:
+	var task = tasks[0]
+	return int(task[1]) if task[0] == "slot" else (int(task[1]) - 1) / 2
+
 func interact(t: Interactable) -> void:
 	match phase:
+		"slot":
+			var want := _slot_target()
+			if t.kind != "pad" or t.index != want:
+				wrong("찾는 받침대는 배열 %d번 자리예요. 층별로 왼쪽부터 세어 보세요." % want)
+				return
+			snapshot()
+			moves += 1
+			code("x = heap[%d];" % want, "값 %d" % heap[want])
+			_done("%d번 받침대의 값은 %d" % [want, heap[want]])
 		"pick":
 			if t.kind != "intake":
 				wrong("먼저 입고에서 새 상자를 집어 오세요.")
@@ -282,6 +305,7 @@ func summary_code() -> void:
 
 func next_action() -> Array:
 	match phase:
+		"slot": return [spot("pad", _slot_target()), "이 받침대"]
 		"pick": return [spot("intake"), "새 상자 집기"]
 		"place": return [spot("pad", heap.size()), "빈자리에 놓기"]
 		"take": return [spot("pad", 0), "최솟값 꺼내기"]

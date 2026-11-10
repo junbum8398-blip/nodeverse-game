@@ -5,6 +5,7 @@ extends WalkStage
 
 const CAP := 3
 const LEVELS := [
+	{"type": "order", "in": ["A", "B"], "out": ["B", "A"], "peek": true, "goal": "A, B를 쌓고 Peek로 top을 확인한 뒤 복구"},
 	{"type": "order", "in": ["A", "B", "C"], "out": ["C", "B", "A"], "goal": "복구 순서 C → B → A 맞추기"},
 	{"type": "order", "in": ["A", "B", "C"], "out": ["B", "C", "A"], "goal": "복구 순서 B → C → A 맞추기"},
 	{"type": "bracket", "s": "([]{})", "goal": "괄호 검사: 여는 괄호는 push, 닫는 괄호는 짝이면 pop"},
@@ -21,6 +22,7 @@ var out: Array = []
 var target: Array = []
 var hand = null
 var step := 0
+var peeked := false
 var board: Node2D
 
 func _init() -> void:
@@ -39,6 +41,7 @@ func _init() -> void:
 		"뒤의 괄호 검사는 책상 위 글자판을 앞에서부터 읽는 일이란다. 여는 괄호는 탑에 push, 닫는 괄호는 레버로 pop하며 짝을 맞춰 보렴. 막히면 노란 화살표를 따라가!",
 	]
 	level_talk = [
+		"먼저 살펴보는 법을 배우자. A, B를 탑에 넣고, 책상에서 E를 눌러 Peek로 맨 위를 확인해 보렴. Peek는 보기만 하니까 탑은 그대로란다. 그다음 B, A 순서로 복구해.",
 		"첫 일감이야. A, B, C가 차례로 들어오는데 복구는 C, B, A 순서로 해야 해. 전부 탑에 넣었다가 꺼내면 저절로 거꾸로 되지!",
 		"이번엔 B, C, A 순서야. 상자가 어떤 순서로 나올지 머릿속으로 그리면서 push와 pop을 번갈아 해 보렴.",
 		"이제 괄호 검사기야! ([]{})를 읽자. 여는 괄호는 탑에 넣고, 닫는 괄호를 만나면 맨 위와 짝이 맞는지 보고 레버로 꺼내렴. 다 읽고 탑이 비면 복구 작업대에서 '올바름'을 선언해.",
@@ -56,6 +59,7 @@ func setup_level(n: int) -> void:
 	out = []
 	hand = null
 	step = 0
+	peeked = false
 	goal_text = L.goal
 	if L.type == "order":
 		inbox = L.in.duplicate()
@@ -64,10 +68,10 @@ func setup_level(n: int) -> void:
 		inbox = []
 		target = []
 	spot("lever").enabled = L.type == "bracket"
-	spot("desk").enabled = L.type == "bracket"
+	spot("desk").enabled = L.type == "bracket" or L.get("peek", false)
 
 func get_state() -> Dictionary:
-	return {"s": stack, "i": inbox, "o": out, "h": hand, "t": step}
+	return {"s": stack, "i": inbox, "o": out, "h": hand, "t": step, "p": peeked}
 
 func set_state(s: Dictionary) -> void:
 	stack = s.s
@@ -75,6 +79,7 @@ func set_state(s: Dictionary) -> void:
 	out = s.o
 	hand = s.h
 	step = s.t
+	peeked = s.p
 
 func rebuild() -> void:
 	var want := {}
@@ -137,6 +142,7 @@ func prompt(t: Interactable) -> String:
 			"tower": return "push (%s 넣기)" % hand if hand != null else ("pop (%s 꺼내기)" % stack.back() if not stack.is_empty() else "탑 (비어 있음)")
 			"intake": return "다음 상자 집기" if hand == null else "입고 레일"
 			"output": return "%d번 자리에 놓기" % (out.size() + 1) if hand != null else "복구 작업대"
+			"desk": return "Peek (맨 위 보기)"
 	else:
 		var more: bool = step < L.s.length()
 		match t.kind:
@@ -177,13 +183,27 @@ func _order(t: Interactable) -> void:
 				moves += 1
 			elif stack.is_empty():
 				wrong("탑이 비어 있어요.")
+			elif L.get("peek", false) and not peeked:
+				wrong("꺼내기 전에 책상에서 Peek로 맨 위를 먼저 확인해 보세요.")
 			else:
 				snapshot()
 				hand = stack.pop_back()
 				code("temp = stack.pop();", "'%s' 꺼내기" % hand)
+		"desk":
+			if stack.is_empty():
+				wrong("탑이 비어 있어서 볼 수 있는 값이 없어요.")
+			elif not inbox.is_empty() or hand != null:
+				wrong("상자를 모두 탑에 넣은 다음 확인해 보세요.")
+			else:
+				snapshot()
+				peeked = true
+				code("x = stack.peek();", "'%s', 탑은 그대로" % stack.back())
+				good("맨 위는 %s예요. Peek는 값을 꺼내지 않아요." % stack.back())
 		"output":
 			if hand == null:
 				wrong("먼저 상자를 들고 오세요.")
+			elif L.get("peek", false) and not peeked:
+				wrong("먼저 탑에 넣고 Peek로 맨 위를 확인해 보세요.")
 			elif hand != target[out.size()]:
 				wrong("지금 복구할 상자는 %s 예요." % target[out.size()])
 			else:
@@ -243,6 +263,12 @@ func summary_code() -> void:
 
 func next_action() -> Array:
 	if L.type == "order":
+		if L.get("peek", false) and not peeked:
+			if hand != null:
+				return [spot("tower"), "탑에 push"]
+			if not inbox.is_empty():
+				return [spot("intake"), "다음 상자 집기"]
+			return [spot("desk"), "Peek로 맨 위 확인"]
 		if hand != null:
 			if hand == target[out.size()]:
 				return [spot("output"), "복구 작업대에 놓기"]

@@ -19,7 +19,30 @@ const C_WHITE := Color("fffaf0")
 const C_CRATE := Color("c8843f")
 const C_CRATE_D := Color("8a5426")
 
+const PROGRESS_PATH := "user://minigame_progress.json"
 static var cleared := {}   # stage_id -> 최고 별 수
+static var progress_saving := true   # 자동 테스트에서는 실제 기록을 건드리지 않도록 끈다
+static var _progress_loaded := false
+
+## 게임 ID(ST01, DS09 ...)별 최고 별 수만 따로 저장한다. 계정·월드 저장 파일은 건드리지 않는다.
+static func load_progress() -> void:
+	if _progress_loaded or not progress_saving:
+		return
+	_progress_loaded = true
+	if not FileAccess.file_exists(PROGRESS_PATH):
+		return
+	var data = JSON.parse_string(FileAccess.get_file_as_string(PROGRESS_PATH))
+	if data is Dictionary:
+		for id in data:
+			cleared[id] = maxi(int(cleared.get(id, 0)), int(data[id]))
+
+static func record_clear(id: String, star_count: int) -> void:
+	cleared[id] = maxi(int(cleared.get(id, 0)), star_count)
+	if not progress_saving:
+		return
+	var f := FileAccess.open(PROGRESS_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(cleared))
 
 var stage_id := "ST00"
 var stage_title := ""
@@ -148,7 +171,7 @@ func win(t: String) -> void:
 		nm.call("complete_attempt", stage_id, true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": stars(), "time": time})
 	if level >= level_count - 1:
 		all_done = true
-		cleared[stage_id] = max(int(cleared.get(stage_id, 0)), stars())
+		record_clear(stage_id, stars())
 		if nm:
 			nm.call("complete_task", stage_id, {"stage_id": stage_id, "moves": moves, "mistakes": mistakes, "stars": stars(), "time": time})
 

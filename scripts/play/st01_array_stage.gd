@@ -7,10 +7,12 @@ const S := 1281.0 / 1672.0
 const CAP := 5
 const CRATE_SCENE := preload("res://scenes/play/Crate.tscn")
 const LEVELS := [
+	{"arr": [10, 20, 30, 40], "tray": null, "target": [10, 20, 30, 40], "goal": "인덱스 2와 0의 값 조회하기", "opt": 2, "read": [2, 0]},
 	{"arr": [10, 30, 40], "tray": 20, "target": [10, 20, 30, 40], "goal": "인덱스 1에 20 넣기", "opt": 3, "ins": 1},
 	{"arr": [10, 20, 30, 40], "tray": null, "target": [20, 30, 40], "goal": "인덱스 0의 10 지우고 빈칸 없이 당기기", "opt": 4, "del": 0},
 	{"arr": [15, 25, 35, 45], "tray": 5, "target": [5, 15, 25, 35, 45], "goal": "인덱스 0에 5 넣기", "opt": 5, "ins": 0},
 	{"arr": [7, 14, 99, 21, 28], "tray": null, "target": [7, 14, 21, 28], "goal": "인덱스 2의 99 지우고 빈칸 없이 당기기", "opt": 3, "del": 2},
+	{"arr": [7, 14, 21, 28, 35], "tray": 9, "target": [7, 9, 14, 21, 28], "goal": "가득 찬 배열: 35를 지운 뒤 인덱스 1에 9 넣기", "opt": 5, "ins": 1, "full": true},
 ]
 const NPC_NAME := "보관소 관리인"
 const NPC_PORTRAIT := preload("res://textures/npc_portraits/NPC01_portrait.png")
@@ -25,10 +27,12 @@ const INTRO := [
 	"조작법! WASD로 걷고, 보관함 앞에서 E를 누르면 상자를 집거나 내려놔. 새 상자는 입고 트레이에, 지울 상자는 반환 레버로 보내면 돼. 막히면 노란 화살표를 따라가!",
 ]
 const LEVEL_TALK := [
+	"몸풀기로 조회부터 해 보자. 2번 칸과 0번 칸 앞에서 E를 눌러 값을 읽어 줘. 번호만 알면 바로 찾아갈 수 있어!",
 	"첫 번째 일이야. 인덱스 1에 새 상자 20을 넣어 줘! 1번 칸을 비우려면 40, 30 순서로 뒤로 밀어야겠지?",
 	"이번엔 삭제야. 0번 칸의 10을 반환 레버로 보내고, 나머지 상자들을 앞으로 당겨서 빈틈을 없애 줘.",
 	"맨 앞, 인덱스 0에 5를 넣어 볼래? 맨 앞에 넣으려면 상자 4개를 전부 한 칸씩 밀어야 해. 배열 앞쪽 삽입이 왜 느린지 느껴 봐!",
-	"마지막! 2번 칸의 99는 잘못 들어온 상자야. 지우고 뒤의 21, 28을 앞으로 당겨 줘.",
+	"2번 칸의 99는 잘못 들어온 상자야. 지우고 뒤의 21, 28을 앞으로 당겨 줘.",
+	"마지막! 배열이 5칸 다 찼으니 새 상자는 바로 못 넣어. 먼저 35를 지우고, 28부터 뒤로 밀어서 1번 칸을 비운 다음 9를 넣어 줘.",
 ]
 static var intro_seen := false
 var _talked_level := -1
@@ -37,6 +41,7 @@ var level := 0
 var slots: Array = []          # 값 또는 null
 var tray = null
 var hand = null                # {"v": 값, "from": 칸 번호 또는 "tray"}
+var reads: Array = []          # 조회 레벨에서 아직 읽지 않은 인덱스
 var target: Array = []
 var opt := 0
 var moves := 0
@@ -87,6 +92,7 @@ func start_level(n: int) -> void:
 		slots.append(L.arr[i] if i < L.arr.size() else null)
 	tray = L.tray
 	hand = null
+	reads = L.get("read", []).duplicate()
 	target = L.target
 	opt = L.opt
 	moves = 0
@@ -154,7 +160,7 @@ func _spawn(v: int, p: Vector2) -> StageCrate:
 
 # ---------- 상호작용 ----------
 func _snapshot() -> void:
-	_undo.append({"slots": slots.duplicate(), "tray": tray, "hand": hand.duplicate() if hand else null, "moves": moves, "code": code_lines.duplicate(true)})
+	_undo.append({"slots": slots.duplicate(), "tray": tray, "hand": hand.duplicate() if hand else null, "reads": reads.duplicate(), "moves": moves, "code": code_lines.duplicate(true)})
 
 # ---------- 코드 표시 ----------
 func _code(code: String, comment: String) -> void:
@@ -206,6 +212,15 @@ func _render_code() -> void:
 func _summary_code() -> void:
 	var L: Dictionary = LEVELS[level]
 	var n0: int = L.arr.size()
+	if L.has("read"):
+		_code("", "")
+		_code("// 인덱스만 알면 바로 읽어요: O(1)", "")
+		return
+	if L.has("full"):
+		_code("length = %d;" % target.size(), "길이 갱신")
+		_code("", "")
+		_code("// 가득 차면 넣기 전에 먼저 지워야 해요", "")
+		return
 	_code("length = %d;" % target.size(), "길이 갱신")
 	_code("", "")
 	_code("// ── 반복문으로 쓰면 ──", "")
@@ -237,6 +252,16 @@ func _on_interact(t: Interactable) -> void:
 	_check()
 
 func _slot(i: int) -> void:
+	if not reads.is_empty():
+		if i != int(reads[0]):
+			_wrong("지금 조회할 칸은 %d번이에요." % int(reads[0]))
+			return
+		_snapshot()
+		reads.pop_front()
+		moves += 1
+		_code("x = arr[%d];" % i, "%d 조회" % slots[i])
+		hud.toast("arr[%d] = %d (상자는 그대로예요)" % [i, slots[i]], StageHUD.GREEN)
+		return
 	if hand == null:
 		if slots[i] == null:
 			_wrong("%d번 칸은 비어 있어요." % i)
@@ -249,7 +274,10 @@ func _slot(i: int) -> void:
 		crates.erase("slot%d" % i)
 		return
 	if slots[i] != null:
-		_wrong("%d번 칸에는 이미 상자가 있어요." % i)
+		if typeof(hand.from) != TYPE_INT and not slots.has(null):
+			_wrong("배열이 가득 찼어요 (길이 = 용량). 먼저 삭제해서 자리를 만드세요.")
+		else:
+			_wrong("%d번 칸에는 이미 상자가 있어요." % i)
 		return
 	if typeof(hand.from) == TYPE_INT and absi(int(hand.from) - i) > 1:
 		_wrong("상자는 바로 옆 칸으로만 한 칸씩 옮길 수 있어요.")
@@ -342,7 +370,7 @@ func _wrong(msg: String) -> void:
 	tw.tween_property(player.sprite, "position:x", 0.0, 0.04)
 
 func _check() -> void:
-	if hand != null:
+	if hand != null or not reads.is_empty():
 		return
 	var arr := []
 	var gap := false
@@ -370,7 +398,7 @@ func _check() -> void:
 			if last:
 				nm.call("complete_task", "ST01_ARRAY", {"moves": moves, "mistakes": mistakes, "stars": stars, "completed_levels": LEVELS.size()})
 		if last:
-			MiniGameBase.cleared["ST01"] = maxi(int(MiniGameBase.cleared.get("ST01", 0)), stars)
+			MiniGameBase.record_clear("ST01", stars)
 
 func _undo_last() -> void:
 	if done or _undo.is_empty():
@@ -379,6 +407,7 @@ func _undo_last() -> void:
 	slots = s.slots
 	tray = s.tray
 	hand = s.hand
+	reads = s.reads
 	moves = s.moves
 	code_lines = s.code
 	_rebuild_crates()
@@ -390,6 +419,8 @@ func _undo_last() -> void:
 
 # ---------- 안내 ----------
 func _next_action() -> Array:
+	if not reads.is_empty():
+		return ["slot", int(reads[0]), "%d번 칸 조회하기" % int(reads[0])]
 	if hand != null:
 		if typeof(hand.from) != TYPE_INT:
 			var t := target.find(hand.v)
@@ -439,6 +470,8 @@ func _refresh() -> void:
 func _prompt(t: Interactable) -> String:
 	match t.kind:
 		"slot":
+			if not reads.is_empty():
+				return "%d번 칸 값 읽기" % t.index
 			if hand == null:
 				return "%d 집기" % slots[t.index] if slots[t.index] != null else "%d번 칸 (비어 있음)" % t.index
 			return "%d번 칸에 놓기" % t.index

@@ -6,14 +6,20 @@ extends WalkStage
 const KEYS := ["A", "B", "C"]
 const VALUE := {"A": 10, "B": 20, "C": 30}
 const LEVELS := [
+	{"next": {"A": "B", "B": "C", "C": null}, "head": "A", "held": [], "target": ["A", "B", "C"], "goal": "HEAD에서 next를 따라 차례로 읽기", "opt": 3, "read": true,
+	 "plan": [], "sum": ["for (cur = head; cur != null; cur = cur.next)", "    read(cur.value);"]},
 	{"next": {"A": "C", "B": null, "C": null}, "head": "A", "held": ["B"], "target": ["A", "B", "C"], "goal": "A와 C 사이에 B(20) 끼우기", "opt": 2,
 	 "plan": [["B", "C"], ["A", "B"]], "sum": ["Node b = new Node(20);", "b.next = a.next;", "a.next = b;"]},
 	{"next": {"A": "B", "B": "C", "C": null}, "head": "A", "held": [], "target": ["A", "C"], "goal": "B(20)를 리스트에서 빼기", "opt": 1,
 	 "plan": [["A", "C"]], "sum": ["a.next = a.next.next;", "// b 는 아무도 안 가리켜 사라져요"]},
 	{"next": {"A": "C", "B": null, "C": null}, "head": "A", "held": ["B"], "target": ["B", "A", "C"], "goal": "맨 앞에 B(20) 넣기 (HEAD도 옮기기)", "opt": 2,
 	 "plan": [["B", "A"], ["HEAD", "B"]], "sum": ["Node b = new Node(20);", "b.next = head;", "head = b;"]},
+	{"next": {"A": "B", "B": "C", "C": null}, "head": "A", "held": [], "target": ["B", "C"], "goal": "첫 노드 A(10) 지우기 (HEAD 옮기기)", "opt": 1,
+	 "plan": [["HEAD", "B"]], "sum": ["head = head.next;", "// a 는 아무도 안 가리켜 사라져요"]},
 	{"next": {"A": "B", "B": "C", "C": null}, "head": "A", "held": [], "target": ["A", "C", "B"], "goal": "순서를 A → C → B 로 바꾸기", "opt": 3,
 	 "plan": [["C", "B"], ["A", "C"], ["B", null]], "sum": ["c.next = b;", "a.next = c;", "b.next = null;"]},
+	{"next": {"A": "B", "B": "C", "C": null}, "head": "A", "held": [], "target": ["A"], "goal": "A 하나만 남기기 (A.next를 끝으로)", "opt": 1,
+	 "plan": [["A", null]], "sum": ["a.next = null;", "// 노드가 하나여도 끝은 null 이에요"]},
 ]
 
 var nxt := {}
@@ -22,6 +28,7 @@ var held: Array = []
 var lost: Array = []
 var removed: Array = []
 var cable = null            # 들고 있는 연결선의 출발 ("A", "B", "C", "HEAD") 또는 null
+var read_i := 0             # 읽기 레벨: 지금까지 읽은 노드 수
 var L: Dictionary
 var head_label: Label
 var cable_line: Line2D
@@ -44,10 +51,13 @@ func _init() -> void:
 		"조작법! WASD로 걷고, 받침대 앞에서 E를 누르면 그 노드의 next 연결선을 집어. 가리킬 받침대나 '끝' 단말기에 가서 E로 이으면 돼. 막히면 노란 화살표를 따라가!",
 	]
 	level_talk = [
+		"먼저 읽는 법부터! HEAD가 가리키는 A에서 시작해서 next를 따라 A, B, C 받침대 순서로 E를 눌러 값을 읽어 줘.",
 		"첫 번째 일이야. A와 C 사이에 B를 끼워 줘. B.next를 C로 먼저 잇고, 그다음 A.next를 B로 바꾸는 거야. 순서를 바꾸면 C를 잃어버려!",
 		"이번엔 삭제야. B를 빼려면 A.next가 B를 건너뛰고 C를 가리키게만 하면 돼. 아무도 안 가리키는 B는 저절로 사라지지.",
 		"맨 앞에 B를 넣어 볼래? B.next를 A로 잇고, HEAD 팻말에서 연결선을 집어 B로 옮겨. HEAD를 안 옮기면 B는 리스트에 못 들어와.",
-		"마지막! A → B → C를 A → C → B로 바꿔 줘. 꼭 C.next부터 B로 이어 둬야 해. 잠깐 고리가 생겨도 괜찮아. 마지막엔 B.next를 '끝'에 이어서 고리를 풀어 줘.",
+		"이번엔 첫 노드 A를 지워 볼래? HEAD 팻말에서 연결선을 집어 B로 옮기면 돼. 아무도 안 가리키는 A는 저절로 사라져.",
+		"A → B → C를 A → C → B로 바꿔 줘. 꼭 C.next부터 B로 이어 둬야 해. 잠깐 고리가 생겨도 괜찮아. 마지막엔 B.next를 '끝'에 이어서 고리를 풀어 줘.",
+		"마지막! A 하나만 남겨 줘. A.next를 '끝'에 이으면 B와 C는 함께 떨어져 나가. 노드가 하나뿐이어도 끝은 null이야.",
 	]
 
 func build_stage() -> void:
@@ -69,10 +79,11 @@ func setup_level(n: int) -> void:
 	lost = []
 	removed = []
 	cable = null
+	read_i = 0
 	goal_text = L.goal
 
 func get_state() -> Dictionary:
-	return {"n": nxt, "h": head, "e": held, "l": lost, "r": removed, "c": cable}
+	return {"n": nxt, "h": head, "e": held, "l": lost, "r": removed, "c": cable, "i": read_i}
 
 func set_state(s: Dictionary) -> void:
 	nxt = s.n
@@ -81,6 +92,7 @@ func set_state(s: Dictionary) -> void:
 	lost = s.l
 	removed = s.r
 	cable = s.c
+	read_i = s.i
 
 func chain() -> Array:
 	var out := []
@@ -114,6 +126,8 @@ func rebuild() -> void:
 			link(_anchor(k) + Vector2(0, 10), _anchor(nxt[k]) + Vector2(0, 14), C_LINK, 34.0)
 		if k in held:
 			text_at("로봇 임시 참조", _anchor(k) + Vector2(0, -44), 19, Color("e6c8ff"), 5, stickers)
+	for i in read_i:
+		text_at("%d번째 읽음" % (i + 1), _anchor(L.target[i]) + Vector2(0, -44), 20, StageHUD.GOLD, 5, stickers)
 	for k in lost:
 		text_at("참조 유실!", _anchor(k) + Vector2(0, -44), 22, StageHUD.RED, 6, stickers)
 	for k in removed:
@@ -141,6 +155,8 @@ func state_text() -> String:
 	return s
 
 func prompt(t: Interactable) -> String:
+	if L.has("read"):
+		return "%s 값 읽기" % KEYS[t.index] if t.kind == "node" else t.prompt
 	match t.kind:
 		"head":
 			return "HEAD 연결선 집기" if cable == null else "HEAD 팻말"
@@ -155,7 +171,27 @@ func prompt(t: Interactable) -> String:
 			return "%s 로 잇기" % k
 	return t.prompt
 
+func _read(t: Interactable) -> void:
+	if t.kind != "node":
+		wrong("이번엔 노드 받침대에서 값을 읽어요.")
+		return
+	var k: String = KEYS[t.index]
+	if k != L.target[read_i]:
+		wrong("HEAD부터 next를 따라가야 해요. 지금 읽을 노드는 %s예요." % L.target[read_i])
+		return
+	snapshot()
+	moves += 1
+	code("value = cur.value;" if read_i == 0 else "cur = cur.next;", "%s = %d" % [k, VALUE[k]])
+	read_i += 1
+	rebuild()
+	if read_i == L.target.size():
+		code("cur = cur.next;", "null 이면 끝")
+		win("읽은 순서: %s → null\n실수 %d회" % [" → ".join(L.target), mistakes])
+
 func interact(t: Interactable) -> void:
+	if L.has("read"):
+		_read(t)
+		return
 	match t.kind:
 		"head":
 			if cable == null:
@@ -231,6 +267,10 @@ func summary_code() -> void:
 		code(c)
 
 func next_action() -> Array:
+	if L.has("read"):
+		if read_i >= L.target.size():
+			return [null, ""]
+		return [spot("node", KEYS.find(L.target[read_i])), "%s 값 읽기" % L.target[read_i]]
 	if not lost.is_empty():
 		return [null, ""]
 	for p in L.plan:

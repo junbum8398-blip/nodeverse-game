@@ -11,6 +11,7 @@ const StaticBatcher = preload("res://scripts/static_batcher.gd")
 const PlayerRobot = preload("res://scripts/player_robot.gd")
 const AuthManager = preload("res://scripts/auth_manager.gd")
 const BasicsGuide = preload("res://scripts/basics_guide.gd")
+const LearningCatalog = preload("res://scripts/learning_catalog.gd")
 
 const ASSET_DIR: String = "res://scenes/assets/"
 const WATER_Y: float = 0.05
@@ -495,6 +496,11 @@ func _build_world_async() -> void:
 	_align_queue_crates()
 	for npc in spawned_npcs:
 		npc.set("look_at_target", player)
+		var dialog: String = npc.get_meta("dialog", "")
+		dialog = dialog.replace("이 섬 컴퓨터에서 E를 누르면 SQL 퀴즈를 풀 수 있어요.", "이 섬 컴퓨터에서 E를 누르면 SELECT·WHERE·JOIN 미니게임을 할 수 있어요.")
+		dialog = dialog.replace("컴퓨터에서 알고리즘 퀴즈도 확인해 보세요.", "컴퓨터에서 정렬·이진 탐색·BFS·DFS 미니게임을 확인해 보세요.")
+		dialog = dialog.replace("컴퓨터에서 데이터 탐험 퀴즈를 풀어 보세요.", "컴퓨터에서 결측값·중복 처리와 집계 미니게임을 해 보세요.")
+		npc.set_meta("dialog", dialog)
 	_load_quiz_data()
 	_build_hud()
 	quality.apply(quality.tier, "월드 준비 완료")
@@ -1432,10 +1438,7 @@ func _open_computer_game() -> void:
 		return
 	var terminal := _nearest_terminal()
 	if is_instance_valid(terminal):
-		var quiz_zone: String = terminal.get_meta("quiz_zone", "")
-		if not quiz_zone.is_empty():
-			_open_quiz_for_zone(quiz_zone)
-			return
+		LearningCatalog.selected_category = terminal.get_meta("quiz_zone", "DS")
 	_zoom_busy = true
 	if player != null:
 		saved_player_pos = player.global_position
@@ -3492,7 +3495,8 @@ func _process(delta: float) -> void:
 		prompt_label.modulate = Color(1.0, 0.95, 0.35)
 	elif near_comp:
 		var terminal := _nearest_terminal()
-		var topic: String = terminal.get_meta("learning_title", "자료구조 2D 미니게임")
+		var category: String = terminal.get_meta("quiz_zone", "DS")
+		var topic: String = LearningCatalog.CATEGORIES.get(category, "자료구조") + " 미니게임"
 		prompt_label.text = "💻 [E] 컴퓨터 접속  ➜  " + topic
 		prompt_label.modulate = Color(1.0, 0.95, 0.35)
 	elif active_npc != null:
