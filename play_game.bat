@@ -28,5 +28,8 @@ if not defined GODOT_EXE (
     exit /b 1
 )
 
+echo Preparing new assets and scripts (Godot Import)...
+"%GODOT_EXE%" --headless --import --path "%CD%"
+
 echo Launching NODEVERSE 3D World Game...
 start "" "%GODOT_EXE%" --path "%CD%" --resolution 1600x960 "res://scenes/NodeverseWorld.tscn"

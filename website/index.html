@@ -104,7 +104,7 @@
           <p class="eyebrow">10 DATA STRUCTURE MINI-GAMES</p>
           <h2>자료구조 섬의 <em>10가지 스테이지</em></h2>
         </div>
-        <span class="subnote">스테이지 소개를 둘러보고, 아래에서 스택 미니게임을 직접 플레이해 보세요.</span>
+        <span class="subnote">스테이지 소개를 둘러보고, 아래에서 로봇으로 상자를 옮기는 3D 미니게임을 직접 플레이해 보세요.</span>
       </div>
 
       <!-- Category Filter Tabs -->
@@ -330,16 +330,94 @@
     </section>
 
 
-    <section id="demo" class="play-islands section" aria-labelledby="play-title">
-      <div class="section-heading">
-        <div><p class="eyebrow">DATA STRUCTURE ISLAND · PLAY IN YOUR BROWSER</p><h2 id="play-title">상자 탑을 직접 쌓아보세요.</h2></div>
-        <span class="subnote">자료구조 섬 · 스택 체험판 · 설치 없이 플레이</span>
-      </div>
-      <div class="play-shell">
-        <div class="play-head"><div><p>MISSION · STACK</p><h3>상자 탑 쌓기</h3></div><span id="play-progress">준비</span></div>
-        <div class="play-instructions"><b>목표</b><p>상자를 아래부터 10 → 20 → 30 순서로 쌓아 탑을 완성하세요.</p><b>하는 방법</b><p>상자 버튼을 눌러 PUSH하고, 잘못 올렸다면 POP으로 맨 위 상자부터 꺼내세요.</p></div>
-        <div id="play-board" class="play-board" aria-live="polite"></div>
-        <div class="play-actions"><button type="button" id="play-hint">힌트 보기</button><button type="button" id="play-reset">처음부터</button><span id="play-message" role="status"></span></div>
+    <section id="demo" class="play-islands-section section" aria-labelledby="play-islands-title">
+      <div class="play-islands-container">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PLAYABLE 3-ISLAND MINI-GAME TRIAL</p>
+            <h2 id="play-islands-title">3개 섬의 핵심 미니게임을 <em>직접 플레이해보세요.</em></h2>
+          </div>
+          <span class="subnote">팀 최신 빌드(자료구조 섬 · 알고리즘 섬 · SQL 섬)의 실제 데이터와 규칙을 그대로 옮긴 웹 체험판입니다.</span>
+        </div>
+
+        <!-- 3 Island Selector Tabs -->
+        <div class="island-demo-tabs" role="tablist" aria-label="체험할 섬 미니게임 선택">
+          <button type="button" class="island-demo-tab active" data-island-tab="ds" role="tab" aria-selected="true">
+            <img class="island-demo-tab-thumb" src="assets/stages/st03.png" alt="자료구조 섬 ST03">
+            <div class="island-demo-tab-info">
+              <span class="island-demo-tab-badge">01 · 자료구조 섬 (ST03)</span>
+              <strong class="island-demo-tab-title">최근 작업 복구실</strong>
+              <span class="island-demo-tab-sub">스택(Stack) · LIFO 상자 운반</span>
+            </div>
+            <span class="island-demo-tab-stars" aria-label="클리어 별점">☆☆☆</span>
+          </button>
+
+          <button type="button" class="island-demo-tab" data-island-tab="algo" role="tab" aria-selected="false">
+            <img class="island-demo-tab-thumb" src="assets/stages/alg01.png" alt="알고리즘 섬 ALG01">
+            <div class="island-demo-tab-info">
+              <span class="island-demo-tab-badge">02 · 알고리즘 섬 (ALG01)</span>
+              <strong class="island-demo-tab-title">순서 맞춤 작업대</strong>
+              <span class="island-demo-tab-sub">버블 · 선택 · 삽입 정렬 실험실</span>
+            </div>
+            <span class="island-demo-tab-stars" aria-label="클리어 별점">☆☆☆</span>
+          </button>
+
+          <button type="button" class="island-demo-tab" data-island-tab="sql" role="tab" aria-selected="false">
+            <img class="island-demo-tab-thumb" src="assets/stages/sql01.png" alt="SQL 섬 SQL01">
+            <div class="island-demo-tab-info">
+              <span class="island-demo-tab-badge">03 · SQL 섬 (SQL01)</span>
+              <strong class="island-demo-tab-title">필요한 칸만 꺼내기</strong>
+              <span class="island-demo-tab-sub">5×5 서랍 색칠 · SELECT × WHERE</span>
+            </div>
+            <span class="island-demo-tab-stars" aria-label="클리어 별점">☆☆☆</span>
+          </button>
+        </div>
+
+        <!-- Authentic Godot Stage Shell -->
+        <div class="godot-stage-shell" id="godot-stage-shell">
+          <!-- Top HUD Bar -->
+          <div class="godot-hud-top">
+            <div class="godot-title-box">
+              <span class="godot-stage-id" id="godot-stage-id">ST03</span>
+              <strong class="godot-stage-name" id="godot-stage-name">최근 작업 복구실 (스택 · LIFO)</strong>
+            </div>
+            <div class="godot-mission-plate">
+              <span class="godot-mission-tag">MISSION</span>
+              <span id="godot-mission-text">A → B를 타워에 쌓고, 확인대(Peek)에서 Top을 확인한 뒤 B → A 순서로 작업대에 올리세요.</span>
+            </div>
+            <div class="godot-level-tabs" id="godot-level-tabs" role="tablist" aria-label="단계 선택"></div>
+          </div>
+
+          <!-- NPC Dialogue & Toast Bar -->
+          <div class="godot-npc-bar">
+            <img class="godot-npc-avatar" id="godot-npc-avatar" src="assets/npcs/npc03.png" alt="담당 NPC">
+            <div class="godot-npc-content">
+              <span class="godot-npc-name" id="godot-npc-name">[NPC · 복구실 장인]</span>
+              <p class="godot-npc-speech" id="godot-npc-speech">입고 레일에서 상자를 집어 스택 타워에 쌓아 보세요!</p>
+            </div>
+          </div>
+
+          <!-- Main Split View: Left Interactive Field + Right Live Code / Result Panel -->
+          <div class="godot-stage-main">
+            <div class="godot-field" id="godot-field">
+              <div class="godot-field-inner" id="godot-field-inner"></div>
+            </div>
+            <aside class="godot-code-panel" id="godot-code-panel" aria-label="실시간 코드 및 데이터 상태"></aside>
+          </div>
+
+          <!-- Bottom Controls Bar -->
+          <div class="godot-hud-bottom">
+            <div class="godot-controls-guide" id="godot-controls-guide">
+              마우스 클릭 또는 <kbd>WASD</kbd> 이동 · <kbd>E</kbd> 상호작용 · <kbd>Z</kbd> 되돌리기 · <kbd>R</kbd> 다시 시작
+            </div>
+            <div class="godot-action-btns">
+              <button type="button" class="godot-btn" id="godot-btn-undo">↩ Z · 되돌리기</button>
+              <button type="button" class="godot-btn gold" id="godot-btn-hint">💡 F · 힌트 보기</button>
+              <button type="button" class="godot-btn" id="godot-btn-reset">↻ R · 다시 시작</button>
+              <button type="button" class="godot-btn green" id="godot-btn-next">다음 단계 / 섬 →</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
