@@ -218,6 +218,7 @@
 
 /* Speech Bubble */
 .robot-bubble {
+  display: none !important;
   position: relative;
   background: #ffffff;
   border: 2px solid #234d47;
@@ -389,6 +390,7 @@
     height: 92px;
   }
   .robot-bubble {
+  display: none !important;
     max-width: 220px;
     font-size: 12px;
   }

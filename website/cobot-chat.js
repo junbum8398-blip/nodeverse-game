@@ -307,7 +307,6 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
   function initCobotChat() {
     const companion = document.getElementById('robot-companion');
     const avatarBtn = document.getElementById('robot-avatar-btn');
-    const bubble = document.getElementById('robot-bubble');
     if (!companion) return;
 
     // Inject chat window HTML into companion if not present
@@ -403,7 +402,6 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
     function openChat() {
       chatWindow.classList.add('open');
       chatWindow.setAttribute('aria-hidden', 'false');
-      if (bubble) bubble.style.display = 'none';
       if (avatarBtn) avatarBtn.classList.add('chat-open');
       setTimeout(() => chatInput?.focus(), 150);
     }
@@ -411,11 +409,6 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
     function closeChat() {
       chatWindow.classList.remove('open');
       chatWindow.setAttribute('aria-hidden', 'true');
-      if (bubble) {
-        bubble.style.display = 'block';
-        bubble.style.opacity = '1';
-        bubble.style.transform = 'scale(1)';
-      }
       if (avatarBtn) avatarBtn.classList.remove('chat-open');
     }
 
@@ -567,17 +560,6 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
         }
       }
     });
-
-    // Update speech bubble text to mention Cobot & chat
-    const bubbleTag = companion.querySelector('.bubble-tag');
-    const bubbleText = document.getElementById('bubble-text');
-    if (bubbleTag) bubbleTag.textContent = '🤖 코봇 (Cobot)';
-    if (bubbleText) {
-      bubbleText.innerHTML = `
-        안녕! 나는 NODEVERSE 도우미 <strong>코봇</strong>이야! 🏝️
-        <span class="bubble-sub">(클릭하면 나랑 실시간으로 대화할 수 있어! 💬)</span>
-      `;
-    }
 
     
   }
