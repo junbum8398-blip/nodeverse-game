@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="island-games.css">
   <link rel="stylesheet" href="showcase.css">
+  <link rel="stylesheet" href="cobot-chat.css">
 </head>
 <body>
   <header class="header">
@@ -487,20 +488,21 @@
   </main>
 
   <!-- FLOATING ROBOT COMPANION -->
-  <aside id="robot-companion" class="robot-companion" aria-label="코딩 도우미 노드봇">
+  <aside id="robot-companion" class="robot-companion" aria-label="코봇 AI 안내 도우미">
     <div class="robot-bubble" id="robot-bubble">
       <div class="bubble-header">
-        <span class="bubble-tag">🤖 안내봇</span>
+        <span class="bubble-tag">🤖 코봇 (Cobot)</span>
         <button class="bubble-close" id="bubble-close" title="말풍선 닫기" aria-label="말풍선 닫기">&times;</button>
       </div>
       <p class="bubble-text" id="bubble-text">
-        안녕! 코딩 섬에 온 걸 환영해! 🏝️
-        <span class="bubble-sub">(나를 클릭하면 코딩 꿀팁을 알려줄게!)</span>
+        안녕! 나는 NODEVERSE 도우미 <strong>코봇</strong>이야! 🏝️
+        <span class="bubble-sub">(클릭하면 나랑 실시간으로 대화할 수 있어! 💬)</span>
       </p>
     </div>
-    <div class="robot-avatar-wrapper" id="robot-avatar-btn" role="button" tabindex="0" title="노드봇을 클릭해보세요!">
-      <img src="assets/robot.png" alt="귀여운 도트 로봇 마스코트" class="robot-avatar-img">
+    <div class="robot-avatar-wrapper" id="robot-avatar-btn" role="button" tabindex="0" title="코봇과 채팅하기">
+      <img src="assets/robot.png" alt="귀여운 도트 로봇 마스코트 코봇" class="robot-avatar-img">
       <div class="robot-shadow"></div>
+      <span class="robot-chat-badge" id="robot-chat-badge">💬 CHAT</span>
     </div>
   </aside>
 
@@ -515,5 +517,6 @@
   <script src="app.js"></script>
   <script src="island-games.js"></script>
   <script src="showcase.js"></script>
+  <script src="cobot-chat.js"></script>
 </body>
 </html>

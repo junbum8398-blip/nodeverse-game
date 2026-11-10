@@ -61,38 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const bubbleText = document.getElementById('bubble-text');
   const bubbleClose = document.getElementById('bubble-close');
 
-  const quotes = [
-    { main: '안녕! 코딩 섬에 온 걸 환영해! 🏝️', sub: '(나를 클릭하면 코딩 꿀팁을 알려줄게!)' },
-    { main: '상자를 밀어서 배열을 완성해봐! 📦', sub: '오른쪽 화면에 진짜 Python 코드가 적혀!' },
-    { main: '스택은 접시 쌓기랑 똑같아! 🥞', sub: '맨 위에 놓은 것부터 꺼내 쓰는 LIFO!' },
-    { main: '큐는 맛집 줄 서기랑 똑같아! 🍜', sub: '먼저 온 손님이 먼저 들어가는 FIFO!' },
-    { main: '트리는 나뭇가지처럼 뻗어 나가! 🌳', sub: '루트(Root)에서 리프(Leaf)까지 탐색해봐!' },
-    { main: '외우지 말고 나랑 같이 걸어! 🚀', sub: '10개 관문을 클리어하면 알고리즘 정복!' },
-    { main: '삐빅-! 학습 로그 수집 중! 📡', sub: '너의 모든 플레이는 Kafka로 분석돼!' }
-  ];
-
-  let quoteIdx = 0;
-
-  if (robotAvatarBtn && robotBubble && bubbleText) {
-    // Click robot to cycle dialogues and bounce
+  if (robotAvatarBtn) {
+    // Bounce animation on click
     robotAvatarBtn.addEventListener('click', () => {
-      // Bounce animation
       robotAvatarBtn.classList.remove('robot-clicked');
       void robotAvatarBtn.offsetWidth; // trigger reflow
       robotAvatarBtn.classList.add('robot-clicked');
-
-      // Next dialogue
-      quoteIdx = (quoteIdx + 1) % quotes.length;
-      bubbleText.innerHTML = `${quotes[quoteIdx].main}<span class="bubble-sub">${quotes[quoteIdx].sub}</span>`;
-
-      // Show bubble if closed
-      robotBubble.style.display = 'block';
-      robotBubble.style.opacity = '1';
-      robotBubble.style.transform = 'scale(1)';
     });
 
-    // Close button
-    if (bubbleClose) {
+    // Close button for bubble
+    if (bubbleClose && robotBubble) {
       bubbleClose.addEventListener('click', (e) => {
         e.stopPropagation();
         robotBubble.style.opacity = '0';
