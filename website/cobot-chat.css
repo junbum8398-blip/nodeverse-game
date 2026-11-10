@@ -3,27 +3,7 @@
    Powered by Grok (xAI) API & Built-in Game Knowledge
    ========================================================== */
 
-/* Badge on robot avatar */
-.robot-chat-badge {
-  position: absolute;
-  top: -8px;
-  right: -4px;
-  background: linear-gradient(135deg, #f2c14e, #e69d00);
-  color: #173d42;
-  border: 2px solid #173d42;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 900;
-  padding: 2px 7px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-  animation: badge-pulse 2.2s infinite;
-  pointer-events: none;
-  white-space: nowrap;
-}
 
-@keyframes badge-pulse {
-  0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
 }
 
