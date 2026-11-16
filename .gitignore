@@ -34,3 +34,7 @@ venv/
 !.env.sample
 *.pem
 *.key
+
+# Local capture/review outputs (previews, PDFs, temp renders)
+/output/
+/tmp/
