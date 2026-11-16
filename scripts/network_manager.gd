@@ -1,9 +1,12 @@
 class_name NetworkManagerClass
 extends Node
 
-## NODEVERSE Network & Mini-Game Telemetry Manager (Schema v2)
-## Implements Common Event Schema v2 (/v2/events) for all 24 mini-games
-## Handles non-blocking asynchronous transmission with complete offline exception safety.
+## NODEVERSE Network & Mini-Game Telemetry Manager (G1~G6 Compliant)
+## - G1: Event Schema v2 (/v2/events), 8 learning events, 9 allowed detail keys, <=2KB, ms UTC timestamp
+## - G2: Disk Queue (user://telemetry/pending/<event_id>.json, rejected/ on 401/422, 1s..60s backoff, max 5000)
+## - G3: Normal Exit Marker (NODEVERSE_EXIT_MARKER + NODEVERSE_RUN_ID on WM_CLOSE_REQUEST)
+## - G5: Update Events (9 types) & Required Update pause mode (learning events queued on disk only)
+## - G6: NODEVERSE_PLAYER_ID env var / persistent install UUID
 
 const LearningCatalog = preload("res://scripts/learning_catalog.gd")
 
@@ -22,14 +25,19 @@ enum NetStatus {
 
 const CONFIG_PATH: String = "user://network_config.json"
 const INSTALL_ID_PATH: String = "user://install_id.txt"
+const PENDING_DIR: String = "user://telemetry/pending/"
+const REJECTED_DIR: String = "user://telemetry/rejected/"
 const DEFAULT_HOST: String = "192.168.0.81"
 const DEFAULT_PORT: int = 8000
 const DEFAULT_ENDPOINT: String = "/v2/events"
 const DEFAULT_AUTH_TOKEN: String = "replace-with-a-long-random-local-key"
 const DEFAULT_TIMEOUT: float = 3.0
-const MAX_QUEUE_SIZE: int = 150
+const MAX_QUEUE_SIZE: int = 5000
+const MAX_DISK_QUEUE_FILES: int = 5000
 const MAX_LOG_SIZE: int = 100
 const MAX_DETAILS_BYTES: int = 2048
+const BACKOFF_MIN_SEC: float = 1.0
+const BACKOFF_MAX_SEC: float = 60.0
 
 const ALLOWED_LEARNING_DETAIL_KEYS: Array[String] = [
 	"operation",
@@ -53,6 +61,18 @@ const ALLOWED_UPDATE_DETAIL_KEYS: Array[String] = [
 	"from_version"
 ]
 
+const UPDATE_EVENT_TYPES: Array[String] = [
+	"update_checked",
+	"update_prompted",
+	"update_accepted",
+	"update_dismissed",
+	"pack_download_started",
+	"pack_download_succeeded",
+	"pack_download_failed",
+	"pack_mounted",
+	"build_changed"
+]
+
 # Configuration
 var target_host: String = DEFAULT_HOST
 var target_port: int = DEFAULT_PORT
@@ -60,6 +80,9 @@ var endpoint_path: String = DEFAULT_ENDPOINT
 var auth_token: String = DEFAULT_AUTH_TOKEN
 var auto_send_enabled: bool = true
 var request_timeout: float = DEFAULT_TIMEOUT
+
+# G5 Required-Update Mode: when true, learning events are written to disk queue only, while update events still transmit
+var learning_events_paused: bool = false
 
 # Runtime State
 var current_status: NetStatus = NetStatus.IDLE
@@ -83,8 +106,11 @@ var _http_request: HTTPRequest
 var _pending_queue: Array = []
 var _offline_backlog: Array = []
 var _last_fail_time: int = 0
+var _retry_backoff_sec: float = BACKOFF_MIN_SEC
+var _retry_scheduled: bool = false
 var _is_busy: bool = false
 var _active_request_type: String = ""
+var _active_event_id: String = ""
 var _request_start_time: int = 0
 var _logs: Array = []
 var _debug_panel_scene: PackedScene = null
@@ -92,6 +118,7 @@ var _debug_panel_instance: CanvasLayer = null
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_ensure_queue_dirs()
 	load_config()
 	_init_session()
 
@@ -102,8 +129,34 @@ func _ready() -> void:
 	add_child(_http_request)
 
 	_init_debug_overlay()
+	if auto_send_enabled and DisplayServer.get_name() != "headless":
+		_load_pending_from_disk()
 	log_message("네트워크 매니저 초기화 완료 (v2 대상: %s:%d%s)" % [target_host, target_port, endpoint_path], "info")
 
+# ==========================================
+# G3: NORMAL EXIT MARKER
+# ==========================================
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		write_exit_marker()
+
+static func write_exit_marker() -> void:
+	var path := OS.get_environment("NODEVERSE_EXIT_MARKER").strip_edges()
+	var rid := OS.get_environment("NODEVERSE_RUN_ID").strip_edges()
+	if path != "" and rid != "":
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f != null:
+			f.store_string(rid)
+			f.close()
+
+func quit_game(exit_code: int = 0) -> void:
+	write_exit_marker()
+	if get_tree():
+		get_tree().quit(exit_code)
+
+# ==========================================
+# SESSION & PLAYER ID (G6)
+# ==========================================
 func _init_session() -> void:
 	session_id = generate_uuid_v4()
 	var env_run := OS.get_environment("NODEVERSE_RUN_ID").strip_edges()
@@ -163,6 +216,9 @@ static func resolve_minigame(raw_id: String) -> Array[String]:
 		if cleaned.begins_with(str(g[0]).to_upper()):
 			return [str(g[0]), str(g[3])]
 	return ["ST01", "DS"]
+
+static func is_update_event(ev_type: String) -> bool:
+	return ev_type in UPDATE_EVENT_TYPES
 
 func _init_debug_overlay() -> void:
 	var panel_path = "res://scenes/tools/NetworkDebugPanel.tscn"
@@ -257,7 +313,7 @@ func get_full_url() -> String:
 	return get_base_url() + endpoint_path
 
 # ==========================================
-# EVENT BUILDERS (SCHEMA V2)
+# EVENT BUILDERS (G1 & G5 SCHEMA V2)
 # ==========================================
 func start_task(task_id: String, details: Dictionary = {}) -> void:
 	_update_player_id()
@@ -318,7 +374,16 @@ func complete_task(task_id: String, details: Dictionary = {}) -> void:
 	_dispatch_event(ev)
 	log_message("태스크 완료: %s" % current_task_id, "success")
 
+func send_update_event(event_type: String, details: Dictionary = {}) -> void:
+	if not is_update_event(event_type):
+		return
+	var ev := _create_update_event(event_type, details)
+	_dispatch_event(ev)
+
 func send_custom_event(event_type: String, data: Dictionary = {}) -> void:
+	if is_update_event(event_type):
+		send_update_event(event_type, data)
+		return
 	var mapped_type := "operation_succeeded"
 	match event_type:
 		"task_started", "problem_started": mapped_type = "problem_started"
@@ -370,25 +435,172 @@ func _create_event(event_type: String, details: Dictionary = {}) -> Dictionary:
 	sequence_num += 1
 	return ev
 
+func _create_update_event(event_type: String, details: Dictionary = {}) -> Dictionary:
+	if session_id.is_empty():
+		_init_session()
+	var clean_details := _sanitize_details(details, ALLOWED_UPDATE_DETAIL_KEYS)
+	return {
+		"schema_version": 2,
+		"event_id": generate_uuid_v4(),
+		"player_id": _get_or_create_install_id(),
+		"run_id": current_run_id if not current_run_id.is_empty() else generate_uuid_v4(),
+		"build_version": get_build_version(),
+		"content_version": content_version if not content_version.is_empty() else "base",
+		"event_type": event_type,
+		"occurred_at": get_iso_timestamp(),
+		"details": clean_details
+	}
+
+# ==========================================
+# G2: DISK QUEUE (user://telemetry/pending/ & rejected/)
+# ==========================================
+func _ensure_queue_dirs() -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PENDING_DIR))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REJECTED_DIR))
+
+func _pending_file_path(ev_id: String) -> String:
+	return PENDING_DIR + ev_id + ".json"
+
+func _rejected_file_path(ev_id: String) -> String:
+	return REJECTED_DIR + ev_id + ".json"
+
+func _save_event_to_disk(event_dict: Dictionary) -> void:
+	_ensure_queue_dirs()
+	var ev_id := str(event_dict.get("event_id", "")).strip_edges()
+	if ev_id.is_empty():
+		return
+	var path := _pending_file_path(ev_id)
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(event_dict))
+		f.close()
+	_enforce_disk_queue_limit()
+
+func _delete_pending_file(ev_id: String) -> void:
+	if ev_id.is_empty():
+		return
+	var path := _pending_file_path(ev_id)
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+func _move_pending_to_rejected(ev_id: String, fallback_dict: Dictionary = {}) -> void:
+	if ev_id.is_empty():
+		return
+	_ensure_queue_dirs()
+	var src := _pending_file_path(ev_id)
+	var dst := _rejected_file_path(ev_id)
+	if FileAccess.file_exists(src):
+		var err := DirAccess.rename_absolute(ProjectSettings.globalize_path(src), ProjectSettings.globalize_path(dst))
+		if err != OK:
+			var txt := FileAccess.get_file_as_string(src)
+			var wf := FileAccess.open(dst, FileAccess.WRITE)
+			if wf != null:
+				wf.store_string(txt)
+				wf.close()
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(src))
+	elif not fallback_dict.is_empty():
+		var wf := FileAccess.open(dst, FileAccess.WRITE)
+		if wf != null:
+			wf.store_string(JSON.stringify(fallback_dict))
+			wf.close()
+
+func _enforce_disk_queue_limit() -> void:
+	var dir := DirAccess.open(PENDING_DIR)
+	if dir == null:
+		return
+	var files: PackedStringArray = dir.get_files()
+	if files.size() <= MAX_DISK_QUEUE_FILES:
+		return
+	var entries: Array = []
+	for fname in files:
+		if fname.ends_with(".json"):
+			var p := PENDING_DIR + fname
+			entries.append({"name": fname.trim_suffix(".json"), "mtime": FileAccess.get_modified_time(p)})
+	entries.sort_custom(func(a, b): return int(a["mtime"]) < int(b["mtime"]))
+	var excess := entries.size() - MAX_DISK_QUEUE_FILES
+	for i in range(maxi(0, excess)):
+		_move_pending_to_rejected(str(entries[i]["name"]))
+
+func _load_pending_from_disk() -> void:
+	_ensure_queue_dirs()
+	_enforce_disk_queue_limit()
+	var dir := DirAccess.open(PENDING_DIR)
+	if dir == null:
+		return
+	var files: PackedStringArray = dir.get_files()
+	if files.is_empty():
+		return
+	var loaded_items: Array = []
+	for fname in files:
+		if not fname.ends_with(".json"):
+			continue
+		var p := PENDING_DIR + fname
+		var txt := FileAccess.get_file_as_string(p)
+		var parsed = JSON.parse_string(txt)
+		if parsed is Dictionary and parsed.has("event_id") and parsed.has("event_type"):
+			loaded_items.append(parsed)
+	loaded_items.sort_custom(func(a, b):
+		var ta := str(a.get("occurred_at", ""))
+		var tb := str(b.get("occurred_at", ""))
+		if ta != tb:
+			return ta < tb
+		return int(a.get("sequence", 0)) < int(b.get("sequence", 0))
+	)
+	var existing_ids := {}
+	for item in _pending_queue:
+		existing_ids[str(item.get("event_id", ""))] = true
+	var prepended: Array = []
+	for item in loaded_items:
+		var id_str := str(item.get("event_id", ""))
+		if not existing_ids.has(id_str):
+			prepended.append(item)
+			existing_ids[id_str] = true
+	if not prepended.is_empty():
+		_pending_queue = prepended + _pending_queue
+		log_message("미전송 디스크 큐 %d건 복구 완료" % prepended.size(), "info")
+		call_deferred("_try_flush_queue")
+
 # ==========================================
 # ASYNC TRANSMISSION & EXCEPTION SAFETY
 # ==========================================
 func _dispatch_event(event_dict: Dictionary) -> void:
 	if not auto_send_enabled:
 		return
+	_save_event_to_disk(event_dict)
+	var ev_type := str(event_dict.get("event_type", ""))
+	if learning_events_paused and not is_update_event(ev_type):
+		# G5 Required Update: keep learning events on disk queue only until updated
+		_offline_backlog.append(event_dict)
+		return
 	_pending_queue.append(event_dict)
-	if _pending_queue.size() > MAX_QUEUE_SIZE:
-		_pending_queue.pop_front()
+	while _pending_queue.size() > MAX_QUEUE_SIZE:
+		var dropped: Dictionary = _pending_queue.pop_front()
+		_move_pending_to_rejected(str(dropped.get("event_id", "")), dropped)
 	_try_flush_queue()
+
+func _pick_next_sendable_index() -> int:
+	for i in _pending_queue.size():
+		var ev: Dictionary = _pending_queue[i]
+		var ev_type := str(ev.get("event_type", ""))
+		if not learning_events_paused or is_update_event(ev_type):
+			return i
+	return -1
 
 func _try_flush_queue() -> void:
 	if _is_busy or _pending_queue.is_empty():
 		return
 
-	_is_busy = true
-	var current_event: Dictionary = _pending_queue[0]
-	var json_str := JSON.stringify(current_event)
+	var next_idx := _pick_next_sendable_index()
+	if next_idx < 0:
+		return
 
+	_is_busy = true
+	var current_event: Dictionary = _pending_queue[next_idx]
+	if next_idx > 0:
+		_pending_queue.remove_at(next_idx)
+		_pending_queue.push_front(current_event)
+
+	var json_str := JSON.stringify(current_event)
 	var headers := PackedStringArray([
 		"Content-Type: application/json; charset=utf-8"
 	])
@@ -397,6 +609,7 @@ func _try_flush_queue() -> void:
 		headers.append("Authorization: Bearer %s" % auth_token)
 
 	_active_request_type = str(current_event.get("event_type", "event"))
+	_active_event_id = str(current_event.get("event_id", ""))
 	_request_start_time = Time.get_ticks_msec()
 	_set_status(NetStatus.SENDING, "전송 중: %s" % _active_request_type)
 
@@ -420,13 +633,17 @@ func _on_http_request_completed(result: int, response_code: int, _headers: Packe
 
 	if result == HTTPRequest.RESULT_SUCCESS and (response_code >= 200 and response_code < 300):
 		total_sent_success += 1
+		_retry_backoff_sec = BACKOFF_MIN_SEC
 		_set_status(NetStatus.CONNECTED, "전송 성공 (%d OK, %dms)" % [response_code, last_latency_ms])
 		if not _pending_queue.is_empty():
-			_pending_queue.pop_front()
+			var sent_item: Dictionary = _pending_queue.pop_front()
+			_delete_pending_file(str(sent_item.get("event_id", _active_event_id)))
+		else:
+			_delete_pending_file(_active_event_id)
 		log_message("[%s] 전송 성공 (%d OK, %dms)" % [_active_request_type, response_code, last_latency_ms], "success")
 		event_transmitted.emit(_active_request_type, true, response_code, body_str.substr(0, 80))
 
-		if not _pending_queue.is_empty():
+		if not _pending_queue.is_empty() and get_tree():
 			get_tree().create_timer(0.05).timeout.connect(_try_flush_queue)
 	else:
 		var err_reason := ""
@@ -441,9 +658,9 @@ func _on_http_request_completed(result: int, response_code: int, _headers: Packe
 				err_reason = "네트워크 연결 끊김"
 			_:
 				if response_code == 401:
-					err_reason = "인증 실패 (401: X-API-Key 또는 INGEST_KEY 확인 필요)"
+					err_reason = "인증 실패 (401: X-API-Key 확인 필요)"
 				elif response_code == 422:
-					err_reason = "데이터 형식 불일치 (422: 유효성 오류: %s)" % body_str.substr(0, 100)
+					err_reason = "스키마 유효성 거부 (422: %s)" % body_str.substr(0, 100)
 				elif response_code > 0:
 					err_reason = "HTTP 오류 (%d: %s)" % [response_code, body_str.substr(0, 60)]
 				else:
@@ -457,15 +674,37 @@ func _handle_network_failure(reason: String, code: int, _body_str: String = "") 
 	_last_fail_time = Time.get_ticks_msec()
 	_set_status(NetStatus.OFFLINE, "오프라인/오류: %s" % reason)
 
-	if not _pending_queue.is_empty():
-		var failed_item = _pending_queue.pop_front()
-		if code != 401 and code != 422:
-			_offline_backlog.append(failed_item)
-			if _offline_backlog.size() > MAX_QUEUE_SIZE:
-				_offline_backlog.pop_front()
+	# G2 Rule: 401 & 422 are moved to user://telemetry/rejected/ and NOT retried
+	if code == 401 or code == 422:
+		if not _pending_queue.is_empty():
+			var rejected_item: Dictionary = _pending_queue.pop_front()
+			_move_pending_to_rejected(str(rejected_item.get("event_id", _active_event_id)), rejected_item)
+		else:
+			_move_pending_to_rejected(_active_event_id)
+		log_message("[%s] 전송 거부(%d) -> rejected 이동: %s" % [_active_request_type, code, reason], "error")
+		event_transmitted.emit(_active_request_type, false, code, reason)
+		if not _pending_queue.is_empty() and get_tree():
+			get_tree().create_timer(0.1).timeout.connect(_try_flush_queue)
+		return
 
-	log_message("[%s] 통신 실패: %s (게임은 정상 계속됩니다)" % [_active_request_type, reason], "error")
+	# G2 Rule: Network error / 5xx / offline -> keep in pending/ with same event_id and retry with 1s..60s backoff
+	if not _pending_queue.is_empty():
+		var head_item: Dictionary = _pending_queue[0]
+		_offline_backlog.append(head_item)
+		if _offline_backlog.size() > MAX_QUEUE_SIZE:
+			_offline_backlog.pop_front()
+
+	var wait_sec := _retry_backoff_sec
+	_retry_backoff_sec = minf(_retry_backoff_sec * 2.0, BACKOFF_MAX_SEC)
+	log_message("[%s] 통신 실패 (%.0f초 후 재시도, 디스크 큐 보관됨): %s" % [_active_request_type, wait_sec, reason], "error")
 	event_transmitted.emit(_active_request_type, false, code, reason)
+
+	if not _retry_scheduled and get_tree():
+		_retry_scheduled = true
+		get_tree().create_timer(wait_sec).timeout.connect(func():
+			_retry_scheduled = false
+			_try_flush_queue()
+		)
 
 func _set_status(st: NetStatus, msg: String) -> void:
 	current_status = st

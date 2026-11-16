@@ -71,11 +71,25 @@ class TelemetryRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         now_str = datetime.now().strftime("%H:%M:%S")
-        print(f"{CLR_GRAY}[{now_str}]{CLR_RESET} {CLR_CYAN}[GET Ping/Health]{CLR_RESET} From {self.client_address[0]}:{self.client_address[1]} -> Path: {self.path}")
-        
+        print(f"{CLR_GRAY}[{now_str}]{CLR_RESET} {CLR_CYAN}[GET]{CLR_RESET} From {self.client_address[0]}:{self.client_address[1]} -> Path: {self.path}")
+        if self.path.startswith("/api/game/manifest"):
+            manifest = {
+                "channel": "windows-stable",
+                "latest_build": "0.3.0",
+                "min_build": "0.3.0",
+                "download_page": "https://github.com/junbum8398-blip/nodeverse-game/releases",
+                "notes": "NODEVERSE v0.3.0 기본 빌드",
+                "content": {
+                    "version": "base",
+                    "packs": []
+                }
+            }
+            self._send_json_response(200, manifest)
+            return
+
         resp = {
             "status": "healthy",
-            "server": "NODEVERSE Telemetry Mock Receiver v3.0",
+            "server": "NODEVERSE Telemetry Mock Receiver v2",
             "time": datetime.utcnow().isoformat() + "Z",
             "client_ip": self.client_address[0]
         }
@@ -151,7 +165,8 @@ class TelemetryRequestHandler(BaseHTTPRequestHandler):
             "count": len(accepted_ids),
             "received_at": datetime.utcnow().isoformat() + "Z"
         }
-        self._send_json_response(200, response_data)
+        status_code = 202 if "/v2/events" in self.path else 200
+        self._send_json_response(status_code, response_data)
 
 def run():
     port = DEFAULT_PORT
