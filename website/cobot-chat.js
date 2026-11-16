@@ -187,7 +187,7 @@ NODEVERSE는 **"외우던 프로그래밍과 데이터 개념을, 직접 걸어�
     if (q.includes('누구') || q.includes('코봇') || q.includes('이름') || q.includes('너는')) {
       return `
 🤖 안녕! 나는 NODEVERSE의 공식 AI 가이드 로봇 **코봇(Cobot)**이야!
-초고속 **Groq AI 모델**과 NODEVERSE의 게임 지식베이스를 탑재하고 있어.
+NODEVERSE의 내장 게임 지식베이스로 안내해 줄게.
 게임에 대해 궁금한 점이나 공략법, 다운로드 방법이 있다면 언제든 나에게 물어봐! 🏝️
 `.trim();
     }
@@ -248,15 +248,9 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
   const chatHistory = [];
 
   function getGroqApiKey() {
-    const cfg = window.NODEVERSE_CONFIG;
-    const direct = cfg && (cfg.groqApiKey || cfg.grokApiKey);
-    if (direct) return String(direct).trim();
-    try {
-      // Groq API Key (Base64 encoded to pass GitHub Secret Scanning)
-      return "cVt0dV2iH9TVEKHfMROrev8uYF3bydGW54YG1F6T0V1FKRS0UkC1_ksg".split("").reverse().join("");
-    } catch (e) {
-      return '';
-    }
+    // Provider credentials belong on a server, never in distributed JavaScript.
+    // Until a server-side integration is configured, use built-in game guidance.
+    return '';
   }
 
   // -------------------- GROQ API CALLER --------------------
@@ -328,29 +322,13 @@ NODEVERSE에 대해 아래 내용 중 궁금한 점을 골라 물어봐줘:
                 <span>코봇 (Cobot)</span>
                 
               </div>
-              <span class="cobot-header-sub">NODEVERSE 공식 AI 도우미</span>
+              <span class="cobot-header-sub">NODEVERSE 게임 안내 · 내장 지식 모드</span>
             </div>
           </div>
           <div class="cobot-header-actions">
             <button type="button" class="cobot-icon-btn" id="cobot-btn-clear" title="대화 지우기">↻</button>
             <button type="button" class="cobot-icon-btn" id="cobot-btn-close" title="채팅 닫기">✕</button>
           </div>
-        </div>
-
-        <!-- Grok API Key Drawer -->
-        <div class="cobot-settings-drawer" id="cobot-settings-drawer">
-          <div class="cobot-settings-title">
-            <span>🔑 Grok (xAI) API Key 설정</span>
-            <span style="font-size:10px;color:#7a948c;">xai-...</span>
-          </div>
-          <div class="cobot-api-input-row">
-            <input type="password" class="cobot-api-key-input" id="cobot-api-input" placeholder="xai-xxxxxxxxxxxx" />
-            <button type="button" class="cobot-api-save-btn" id="cobot-api-save">저장</button>
-          </div>
-          <p class="cobot-settings-hint">
-            * xAI 콘솔(console.x.ai)의 API Key를 등록하면 실시간 Grok AI가 답변합니다.<br>
-            * 키가 없어도 내장 게임 지식 엔진으로 모든 질문에 즉시 답해드립니다.
-          </p>
         </div>
 
         <!-- Message List -->

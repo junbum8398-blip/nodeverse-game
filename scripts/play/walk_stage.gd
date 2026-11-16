@@ -74,7 +74,7 @@ func _ready() -> void:
 	hud.set_title(stage_id, stage_title)
 	hud.set_controls("WASD 이동 · E 상호작용 · Z 되돌리기 · R 초기화 · H 도움말 · Esc 메뉴")
 	hud.next_pressed.connect(_next_level)
-	hud.retry_pressed.connect(func(): start_level(level))
+	hud.retry_pressed.connect(_retry_level)
 	hud.dialogue_finished.connect(_on_dialogue_done)
 	hud.build_code_panel(Vector2(968, 214), Vector2(296, 494))
 	player.interacted.connect(_on_interact)
@@ -146,6 +146,13 @@ func _next_level() -> void:
 	else:
 		get_tree().change_scene_to_file(MENU)
 
+func _retry_level() -> void:
+	if not done and (moves > 0 or mistakes > 0):
+		var nm = get_node_or_null("/root/NetworkManager")
+		if nm:
+			nm.call("complete_attempt", stage_id, false, "retry", {"level": level + 1, "moves": moves, "mistakes": mistakes})
+	start_level(level)
+
 func set_goal(t: String) -> void:
 	goal_text = t
 	hud.set_goal(t)
@@ -182,10 +189,10 @@ func win(detail: String) -> void:
 	hud.show_clear("스테이지 클리어!" if last else "레벨 %d 클리어!" % (level + 1), s, detail, last)
 	var nm = get_node_or_null("/root/NetworkManager")
 	if nm:
-		nm.call("complete_attempt", stage_id, true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": s, "is_stage_clear": last})
+		nm.call("complete_attempt", stage_id, true, "", {"level": level + 1, "moves": moves, "mistakes": mistakes, "stars": s})
 	if last:
 		if nm:
-			nm.call("complete_task", stage_id, {"moves": moves, "mistakes": mistakes, "stars": s, "completed_levels": level_count})
+			nm.call("complete_task", stage_id, {"level": level_count, "moves": moves, "mistakes": mistakes, "stars": s})
 		MiniGameBase.record_clear(stage_id, s)
 
 # ---------- 되돌리기 ----------
@@ -340,9 +347,13 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	match ev.keycode:
 		KEY_ESCAPE: get_tree().change_scene_to_file(MENU)
-		KEY_R: start_level(level)
+		KEY_R: _retry_level()
 		KEY_Z: undo_last()
-		KEY_H: talk(intro.slice(1) + [level_talk[level]])
+		KEY_H:
+			var nm = get_node_or_null("/root/NetworkManager")
+			if nm:
+				nm.call("record_operation", "hint", true, "", {}, {}, {"hint_id": "help", "level": level + 1, "moves": moves, "mistakes": mistakes})
+			talk(intro.slice(1) + [level_talk[level]])
 		KEY_ENTER, KEY_KP_ENTER:
 			if done:
 				_next_level()

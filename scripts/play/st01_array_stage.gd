@@ -63,7 +63,7 @@ func _ready() -> void:
 	hud.set_title("ST01", "순서가 있는 보관소")
 	hud.set_controls("WASD 이동 · E 상호작용 · Z 되돌리기 · R 초기화 · H 도움말 · Esc 메뉴")
 	hud.next_pressed.connect(_next_level)
-	hud.retry_pressed.connect(func(): start_level(level))
+	hud.retry_pressed.connect(_retry_level)
 	player.interacted.connect(_on_interact)
 	player.focus_changed.connect(func(_t): _refresh())
 	var tw := create_tween().set_loops()
@@ -109,8 +109,8 @@ func start_level(n: int) -> void:
 	var nm = get_node_or_null("/root/NetworkManager")
 	if nm:
 		if n == 0:
-			nm.call("start_task", "ST01_ARRAY", {"title": "순서가 있는 보관소", "goal": L.goal, "total_levels": LEVELS.size()})
-		nm.call("start_attempt", "ST01_ARRAY", n + 1, {"goal": L.goal, "initial_arr": L.arr})
+			nm.call("start_task", "ST01", {"level": 1})
+		nm.call("start_attempt", "ST01", n + 1, {"level": n + 1})
 	if n != _talked_level:
 		_talked_level = n
 		if n == 0 and not intro_seen:
@@ -125,6 +125,13 @@ func _next_level() -> void:
 		start_level(level + 1)
 	else:
 		get_tree().change_scene_to_file("res://scenes/Main.tscn")
+
+func _retry_level() -> void:
+	if not done and (moves > 0 or mistakes > 0):
+		var nm = get_node_or_null("/root/NetworkManager")
+		if nm:
+			nm.call("complete_attempt", "ST01", false, "retry", {"level": level + 1, "moves": moves, "mistakes": mistakes})
+	start_level(level)
 
 func slot_pos(i: int) -> Vector2:
 	var slot := world.get_node("Slot%d" % i) as Node2D
@@ -503,9 +510,13 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	match ev.keycode:
 		KEY_ESCAPE: get_tree().change_scene_to_file("res://scenes/Main.tscn")
-		KEY_R: start_level(level)
+		KEY_R: _retry_level()
 		KEY_Z: _undo_last()
-		KEY_H: _talk(INTRO.slice(1) + [LEVEL_TALK[level]])
+		KEY_H:
+			var nm = get_node_or_null("/root/NetworkManager")
+			if nm:
+				nm.call("record_operation", "hint", true, "", {}, {}, {"hint_id": "help", "level": level + 1, "moves": moves, "mistakes": mistakes})
+			_talk(INTRO.slice(1) + [LEVEL_TALK[level]])
 		KEY_ENTER, KEY_KP_ENTER:
 			if done:
 				_next_level()

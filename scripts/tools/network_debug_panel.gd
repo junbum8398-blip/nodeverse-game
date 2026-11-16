@@ -91,7 +91,7 @@ func _on_save_pressed() -> void:
 	if p <= 0:
 		p = 8000
 	if ep.is_empty():
-		ep = "/v1/events"
+		ep = "/v2/events"
 	
 	_net_mgr.call("set_server_target", h, p, ep, k)
 	_update_status_display("IDLE", "설정이 저장되었습니다.")

@@ -12,6 +12,7 @@ config_version=5
 
 config/name="NODEVERSE 3D Assets"
 config/description="NODEVERSE 연결섬 3D 월드 (메인·자료구조·알고리즘·SQL 섬) + 모듈형 3D 에셋 70종 (sample-assets 53종 + objects 20종, GLB + TSCN)"
+config/version="0.3.0"
 run/main_scene="res://scenes/NodeverseWorld.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0.07, 0.3, 0.4, 1)

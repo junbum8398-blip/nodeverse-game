@@ -77,8 +77,8 @@ func _ready() -> void:
 		tool_id = snapshot.tool
 		_recompile()
 	else:
+		_telemetry("start_task", [stage_id, {"level": 1}])
 		_load_level(0)
-		_telemetry("start_task", [stage_id, {"title": game.title, "goal": _level().mission, "total_levels": 3}])
 	if not help_seen.get(stage_id, false):
 		phase = "help"
 		help_seen[stage_id] = true
@@ -219,7 +219,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 			elif phase == "play":
 				submit()
 		KEY_Z: undo()
-		KEY_X: reset_problem()
+		KEY_X, KEY_R: reset_problem()
 		KEY_F: use_hint()
 		KEY_H:
 			phase = "help"
@@ -256,6 +256,9 @@ func undo() -> void:
 func reset_problem() -> void:
 	if phase == "solved":
 		return
+	if not undo_stack.is_empty() or mistakes > 0:
+		_telemetry("complete_attempt", [stage_id, false, "reset", {"level": level + 1, "mistakes": mistakes}])
+		_telemetry("start_attempt", [stage_id, level + 1, {"level": level + 1}])
 	m = Model.new_model()
 	undo_stack.clear()
 	wrong_cols = []
@@ -266,10 +269,11 @@ func reset_problem() -> void:
 
 func use_hint() -> void:
 	var h: Array = _level().hints
+	var current_hint_id := str(hint_i + 1)
 	say(h[hint_i])
 	hint_i = mini(hint_i + 1, h.size() - 1)
 	hints_used += 1
-	_op("hint", true)
+	_telemetry("record_operation", ["hint", true, "", {}, {}, {"hint_id": current_hint_id, "level": level + 1, "mistakes": mistakes}])
 
 func press_e() -> void:
 	if phase != "play":
