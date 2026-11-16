@@ -38,3 +38,6 @@ venv/
 # Local capture/review outputs (previews, PDFs, temp renders)
 /output/
 /tmp/
+
+# Godot import sidecars generated for the static website folder
+/website/**/*.import
