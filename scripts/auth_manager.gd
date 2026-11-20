@@ -72,9 +72,10 @@ static func _save_store(store: Dictionary) -> bool:
 	return true
 
 ## Register a new account (stores SHA-256 hash only, never plaintext)
-static func register(username: String, password_text: String) -> Dictionary:
+static func register(username: String, password_text: String, recovery_key: String = "") -> Dictionary:
 	var uname := username.strip_edges()
 	var p := password_text.strip_edges()
+	var rkey := recovery_key.strip_edges().to_lower()
 	if uname.length() < 2:
 		return {"success": false, "message": "아이디는 2글자 이상 입력해주세요."}
 	if p.length() < 3:
@@ -88,13 +89,15 @@ static func register(username: String, password_text: String) -> Dictionary:
 	users[uname] = {
 		"user_id": _generate_uuid_v4(),
 		"password_hash": _hash_password(p),
+		"recovery_key": rkey,
 		"created_at": Time.get_datetime_string_from_system(),
 		"last_login": Time.get_datetime_string_from_system(),
 		"save_data": {
 			"difficulty": "NOVICE",
 			"score": 0,
 			"cleared_quizzes": [],
-			"player_pos": [0.0, 0.55, 1.6],
+			"minigame_cleared": {},
+			"player_pos": [0.0, 1.08, 12.15],
 			"zone": "MAIN",
 			"has_saved_game": false
 		}
@@ -103,6 +106,59 @@ static func register(username: String, password_text: String) -> Dictionary:
 	store["last_user"] = uname
 	_save_store(store)
 	return {"success": true, "message": "회원가입이 완료되었습니다! 로그인해주세요."}
+
+## Find registered account ID(s) by recovery email/keyword
+static func find_usernames_by_recovery(recovery_key: String) -> Dictionary:
+	var rkey := recovery_key.strip_edges().to_lower()
+	if rkey.is_empty():
+		return {"success": false, "usernames": [], "message": "가입 시 입력한 복구용 이메일 또는 별명을 입력해주세요."}
+	var store := _get_store()
+	var users: Dictionary = store.get("users", {})
+	var found: Array[String] = []
+	for uname in users.keys():
+		if uname == "Guest":
+			continue
+		var rec = users[uname]
+		if rec is Dictionary:
+			var saved_key := str(rec.get("recovery_key", "")).strip_edges().to_lower()
+			if not saved_key.is_empty() and saved_key == rkey:
+				found.append(str(uname))
+	if found.is_empty():
+		return {"success": false, "usernames": [], "message": "일치하는 계정을 찾을 수 없습니다. 복구 정보를 확인해주세요."}
+	return {
+		"success": true,
+		"usernames": found,
+		"message": "찾은 아이디: %s" % ", ".join(found)
+	}
+
+## Reset password safely (verifies recovery_key if registered, stores SHA-256 hash only)
+static func reset_password(username: String, recovery_key: String, new_password: String) -> Dictionary:
+	var uname := username.strip_edges()
+	var rkey := recovery_key.strip_edges().to_lower()
+	var np := new_password.strip_edges()
+	if uname.is_empty():
+		return {"success": false, "message": "아이디를 입력해주세요."}
+	if np.length() < 3:
+		return {"success": false, "message": "새 비밀번호는 3글자 이상 입력해주세요."}
+
+	var store := _get_store()
+	var users: Dictionary = store.get("users", {})
+	if not users.has(uname) or uname == "Guest":
+		return {"success": false, "message": "존재하지 않는 아이디입니다."}
+
+	var rec: Dictionary = users[uname]
+	var saved_key := str(rec.get("recovery_key", "")).strip_edges().to_lower()
+	if not saved_key.is_empty() and saved_key != rkey:
+		return {"success": false, "message": "복구용 이메일/별명이 일치하지 않습니다."}
+
+	rec["password_hash"] = _hash_password(np)
+	rec.erase("password")
+	if saved_key.is_empty() and not rkey.is_empty():
+		rec["recovery_key"] = rkey
+	users[uname] = rec
+	store["users"] = users
+	_save_store(store)
+	return {"success": true, "message": "비밀번호가 안전하게 변경되었습니다! 새 비밀번호로 로그인하세요."}
 
 ## Login with username and password
 static func login(username: String, password_text: String) -> Dictionary:

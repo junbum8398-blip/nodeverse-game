@@ -160,12 +160,26 @@ var score_badge_lbl: Label
 var title_modal: Control
 var auth_user_edit: LineEdit
 var auth_pass_edit: LineEdit
+var auth_recovery_box: VBoxContainer
+var auth_recovery_edit: LineEdit
 var auth_submit_btn: Button
 var auth_feedback_lbl: Label
 var auth_is_register_mode: bool = false
 var auth_tab_login_btn: Button
 var auth_tab_register_btn: Button
 var pass_toggle_btn: Button
+
+var recovery_modal: Control
+var rec_is_pw_mode: bool = false
+var rec_tab_id_btn: Button
+var rec_tab_pw_btn: Button
+var rec_user_box: VBoxContainer
+var rec_user_edit: LineEdit
+var rec_key_edit: LineEdit
+var rec_new_pw_box: VBoxContainer
+var rec_new_pw_edit: LineEdit
+var rec_feedback_lbl: Label
+var rec_submit_btn: Button
 
 var lobby_modal: Control
 var welcome_lbl: Label
@@ -1764,6 +1778,7 @@ func _build_hud() -> void:
 	_build_ingame_hud(ui_canvas)
 	_build_camera_debug_panel(ui_canvas)
 	_build_title_modal(ui_canvas)
+	_build_recovery_modal(ui_canvas)
 	_build_lobby_modal(ui_canvas)
 	_build_pause_modal(ui_canvas)
 	_build_quiz_modal(ui_canvas)
@@ -2625,6 +2640,28 @@ func _build_title_modal(canvas: CanvasLayer) -> void:
 	auth_pass_edit.text_submitted.connect(func(_t): _on_auth_submit())
 	p_box.add_child(auth_pass_edit)
 
+	# 복구용 이메일/별명 입력 필드 (회원가입 탭에서만 표시 — 아이디/비밀번호 찾기용)
+	auth_recovery_box = VBoxContainer.new()
+	auth_recovery_box.add_theme_constant_override("separation", 3)
+	auth_recovery_box.visible = false
+	form_vb.add_child(auth_recovery_box)
+
+	var r_lbl := Label.new()
+	r_lbl.text = "복구용 이메일 또는 별명 (아이디·비번 찾기용)"
+	r_lbl.add_theme_font_size_override("font_size", 12.0)
+	r_lbl.add_theme_color_override("font_color", Color(0.18, 0.24, 0.25))
+	auth_recovery_box.add_child(r_lbl)
+
+	auth_recovery_edit = LineEdit.new()
+	auth_recovery_edit.placeholder_text = "예: hong@email.com 또는 나만의 별명"
+	auth_recovery_edit.custom_minimum_size = Vector2(0, 32)
+	auth_recovery_edit.add_theme_font_size_override("font_size", 13.0)
+	auth_recovery_edit.add_theme_stylebox_override("normal", _style_input())
+	auth_recovery_edit.add_theme_stylebox_override("focus", _style_input(Color(0.102, 0.455, 0.510), 2))
+	auth_recovery_edit.add_theme_color_override("font_color", Color(0.13, 0.17, 0.18))
+	auth_recovery_edit.add_theme_color_override("font_placeholder_color", Color(0.62, 0.65, 0.65))
+	auth_recovery_box.add_child(auth_recovery_edit)
+
 	# 비밀번호 보기 스위치
 	var show_pass_row := HBoxContainer.new()
 	form_vb.add_child(show_pass_row)
@@ -2710,6 +2747,36 @@ func _build_title_modal(canvas: CanvasLayer) -> void:
 	guest_btn.pressed.connect(func(): _on_guest_login())
 	form_vb.add_child(guest_btn)
 
+	# 아이디 찾기 / 비밀번호 재설정 링크 행
+	var help_links_row := HBoxContainer.new()
+	help_links_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	help_links_row.add_theme_constant_override("separation", 10)
+	form_vb.add_child(help_links_row)
+
+	var find_id_btn := Button.new()
+	find_id_btn.text = "아이디 찾기"
+	find_id_btn.flat = true
+	find_id_btn.add_theme_font_size_override("font_size", 12.0)
+	find_id_btn.add_theme_color_override("font_color", Color(0.28, 0.42, 0.44))
+	find_id_btn.add_theme_color_override("font_hover_color", Color(0.102, 0.455, 0.510))
+	find_id_btn.pressed.connect(func(): _open_recovery_modal(false))
+	help_links_row.add_child(find_id_btn)
+
+	var div_lbl := Label.new()
+	div_lbl.text = "|"
+	div_lbl.add_theme_font_size_override("font_size", 11.5)
+	div_lbl.add_theme_color_override("font_color", Color(0.70, 0.72, 0.70))
+	help_links_row.add_child(div_lbl)
+
+	var reset_pw_btn := Button.new()
+	reset_pw_btn.text = "비밀번호 재설정"
+	reset_pw_btn.flat = true
+	reset_pw_btn.add_theme_font_size_override("font_size", 12.0)
+	reset_pw_btn.add_theme_color_override("font_color", Color(0.28, 0.42, 0.44))
+	reset_pw_btn.add_theme_color_override("font_hover_color", Color(0.102, 0.455, 0.510))
+	reset_pw_btn.pressed.connect(func(): _open_recovery_modal(true))
+	help_links_row.add_child(reset_pw_btn)
+
 	# [3. 좌측 하단 월드 투어 정보 오버레이 (일시정지 버튼 없이 순수 정보만 깔끔하게 표시)]
 	var tour_hud := VBoxContainer.new()
 	tour_hud.anchor_left = 0.0
@@ -2747,6 +2814,8 @@ func _build_title_modal(canvas: CanvasLayer) -> void:
 
 func _switch_auth_tab(register_mode: bool) -> void:
 	auth_is_register_mode = register_mode
+	if auth_recovery_box != null:
+		auth_recovery_box.visible = register_mode
 	if auth_is_register_mode:
 		_apply_btn_styles(auth_tab_login_btn, Color(0.929, 0.902, 0.839), Color(0.902, 0.871, 0.804), Color(0.494, 0.463, 0.404), Color(0.871, 0.835, 0.761), 10, 1)
 		_apply_btn_styles(auth_tab_register_btn, Color(0.980, 0.969, 0.937), Color(0.980, 0.969, 0.937), Color(0.118, 0.231, 0.243), Color(0.784, 0.749, 0.671), 10, 2)
@@ -2763,12 +2832,13 @@ func _switch_auth_tab(register_mode: bool) -> void:
 func _on_auth_submit() -> void:
 	var u := auth_user_edit.text.strip_edges()
 	var p := auth_pass_edit.text.strip_edges()
+	var rkey := auth_recovery_edit.text.strip_edges() if auth_recovery_edit != null else ""
 	if auth_is_register_mode:
-		var res: Dictionary = AuthManager.register(u, p)
+		var res: Dictionary = AuthManager.register(u, p, rkey)
 		if res.get("success", false):
 			auth_feedback_lbl.text = "🎉 " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
-			_on_login_success(u, {"difficulty": "NOVICE", "score": 0, "has_saved_game": false})
+			_on_login_success(u, {"difficulty": "NOVICE", "score": 0, "minigame_cleared": {}, "has_saved_game": false})
 		else:
 			auth_feedback_lbl.text = "❌ " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
@@ -2781,6 +2851,181 @@ func _on_auth_submit() -> void:
 		else:
 			auth_feedback_lbl.text = "❌ " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
+
+func _build_recovery_modal(canvas: CanvasLayer) -> void:
+	recovery_modal = Control.new()
+	recovery_modal.name = "RecoveryModal"
+	recovery_modal.visible = false
+	recovery_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(recovery_modal)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.08, 0.12, 0.60)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	recovery_modal.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	recovery_modal.add_child(center)
+
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(440, 380)
+	card.add_theme_stylebox_override("panel", _style_panel_flat(
+		Color(0.985, 0.972, 0.938),
+		Color(0.86, 0.82, 0.75),
+		18, 24, 22, 2
+	))
+	center.add_child(card)
+
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 10)
+	card.add_child(vb)
+
+	var head := HBoxContainer.new()
+	vb.add_child(head)
+	var ttl := Label.new()
+	ttl.text = "계정 찾기 및 비밀번호 재설정"
+	ttl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ttl.add_theme_font_size_override("font_size", 18)
+	ttl.add_theme_color_override("font_color", Color(0.118, 0.208, 0.220))
+	head.add_child(ttl)
+
+	var close_btn := Button.new()
+	close_btn.text = "✕"
+	close_btn.custom_minimum_size = Vector2(30, 30)
+	close_btn.pressed.connect(func(): recovery_modal.visible = false)
+	head.add_child(close_btn)
+
+	var tab_row := HBoxContainer.new()
+	tab_row.add_theme_constant_override("separation", 8)
+	vb.add_child(tab_row)
+
+	rec_tab_id_btn = Button.new()
+	rec_tab_id_btn.text = "아이디 찾기"
+	rec_tab_id_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rec_tab_id_btn.custom_minimum_size = Vector2(0, 34)
+	rec_tab_id_btn.pressed.connect(func(): _switch_recovery_tab(false))
+	tab_row.add_child(rec_tab_id_btn)
+
+	rec_tab_pw_btn = Button.new()
+	rec_tab_pw_btn.text = "비밀번호 재설정"
+	rec_tab_pw_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rec_tab_pw_btn.custom_minimum_size = Vector2(0, 34)
+	rec_tab_pw_btn.pressed.connect(func(): _switch_recovery_tab(true))
+	tab_row.add_child(rec_tab_pw_btn)
+
+	rec_user_box = VBoxContainer.new()
+	rec_user_box.add_theme_constant_override("separation", 3)
+	vb.add_child(rec_user_box)
+	var ru_lbl := Label.new()
+	ru_lbl.text = "아이디"
+	ru_lbl.add_theme_font_size_override("font_size", 12.5)
+	ru_lbl.add_theme_color_override("font_color", Color(0.18, 0.24, 0.25))
+	rec_user_box.add_child(ru_lbl)
+	rec_user_edit = LineEdit.new()
+	rec_user_edit.placeholder_text = "비밀번호를 바꿀 아이디를 입력하세요"
+	rec_user_edit.custom_minimum_size = Vector2(0, 34)
+	rec_user_edit.add_theme_stylebox_override("normal", _style_input())
+	rec_user_edit.add_theme_stylebox_override("focus", _style_input(Color(0.102, 0.455, 0.510), 2))
+	rec_user_edit.add_theme_color_override("font_color", Color(0.13, 0.17, 0.18))
+	rec_user_box.add_child(rec_user_edit)
+
+	var rk_box := VBoxContainer.new()
+	rk_box.add_theme_constant_override("separation", 3)
+	vb.add_child(rk_box)
+	var rk_lbl := Label.new()
+	rk_lbl.text = "복구용 이메일 또는 별명"
+	rk_lbl.add_theme_font_size_override("font_size", 12.5)
+	rk_lbl.add_theme_color_override("font_color", Color(0.18, 0.24, 0.25))
+	rk_box.add_child(rk_lbl)
+	rec_key_edit = LineEdit.new()
+	rec_key_edit.placeholder_text = "가입 시 입력한 이메일 또는 별명"
+	rec_key_edit.custom_minimum_size = Vector2(0, 34)
+	rec_key_edit.add_theme_stylebox_override("normal", _style_input())
+	rec_key_edit.add_theme_stylebox_override("focus", _style_input(Color(0.102, 0.455, 0.510), 2))
+	rec_key_edit.add_theme_color_override("font_color", Color(0.13, 0.17, 0.18))
+	rk_box.add_child(rec_key_edit)
+
+	rec_new_pw_box = VBoxContainer.new()
+	rec_new_pw_box.add_theme_constant_override("separation", 3)
+	vb.add_child(rec_new_pw_box)
+	var np_lbl := Label.new()
+	np_lbl.text = "새 비밀번호"
+	np_lbl.add_theme_font_size_override("font_size", 12.5)
+	np_lbl.add_theme_color_override("font_color", Color(0.18, 0.24, 0.25))
+	rec_new_pw_box.add_child(np_lbl)
+	rec_new_pw_edit = LineEdit.new()
+	rec_new_pw_edit.placeholder_text = "새 비밀번호 (3글자 이상)"
+	rec_new_pw_edit.secret = true
+	rec_new_pw_edit.custom_minimum_size = Vector2(0, 34)
+	rec_new_pw_edit.add_theme_stylebox_override("normal", _style_input())
+	rec_new_pw_edit.add_theme_stylebox_override("focus", _style_input(Color(0.102, 0.455, 0.510), 2))
+	rec_new_pw_edit.add_theme_color_override("font_color", Color(0.13, 0.17, 0.18))
+	rec_new_pw_box.add_child(rec_new_pw_edit)
+
+	rec_feedback_lbl = Label.new()
+	rec_feedback_lbl.text = ""
+	rec_feedback_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rec_feedback_lbl.add_theme_font_size_override("font_size", 12.5)
+	rec_feedback_lbl.add_theme_color_override("font_color", Color(0.35, 0.45, 0.46))
+	vb.add_child(rec_feedback_lbl)
+
+	rec_submit_btn = Button.new()
+	rec_submit_btn.text = "아이디 찾기"
+	rec_submit_btn.custom_minimum_size = Vector2(0, 38)
+	_apply_btn_styles(rec_submit_btn, Color(0.102, 0.455, 0.510), Color(0.125, 0.545, 0.612), Color.WHITE, Color.TRANSPARENT, 10)
+	rec_submit_btn.pressed.connect(func(): _on_recovery_submit())
+	vb.add_child(rec_submit_btn)
+
+func _open_recovery_modal(pw_mode: bool) -> void:
+	if recovery_modal == null:
+		return
+	rec_user_edit.text = auth_user_edit.text.strip_edges() if auth_user_edit != null else ""
+	rec_key_edit.text = ""
+	rec_new_pw_edit.text = ""
+	_switch_recovery_tab(pw_mode)
+	recovery_modal.visible = true
+
+func _switch_recovery_tab(pw_mode: bool) -> void:
+	rec_is_pw_mode = pw_mode
+	rec_user_box.visible = pw_mode
+	rec_new_pw_box.visible = pw_mode
+	if pw_mode:
+		_apply_btn_styles(rec_tab_id_btn, Color(0.929, 0.902, 0.839), Color(0.902, 0.871, 0.804), Color(0.494, 0.463, 0.404), Color(0.871, 0.835, 0.761), 10, 1)
+		_apply_btn_styles(rec_tab_pw_btn, Color(0.980, 0.969, 0.937), Color(0.980, 0.969, 0.937), Color(0.118, 0.231, 0.243), Color(0.784, 0.749, 0.671), 10, 2)
+		rec_submit_btn.text = "새 비밀번호로 변경  →"
+		rec_feedback_lbl.text = "아이디와 복구 정보를 입력해 비밀번호를 재설정하세요."
+	else:
+		_apply_btn_styles(rec_tab_id_btn, Color(0.980, 0.969, 0.937), Color(0.980, 0.969, 0.937), Color(0.118, 0.231, 0.243), Color(0.784, 0.749, 0.671), 10, 2)
+		_apply_btn_styles(rec_tab_pw_btn, Color(0.929, 0.902, 0.839), Color(0.902, 0.871, 0.804), Color(0.494, 0.463, 0.404), Color(0.871, 0.835, 0.761), 10, 1)
+		rec_submit_btn.text = "아이디 찾기  →"
+		rec_feedback_lbl.text = "가입 시 입력한 복구용 이메일 또는 별명을 입력하세요."
+	rec_feedback_lbl.add_theme_color_override("font_color", Color(0.35, 0.45, 0.46))
+
+func _on_recovery_submit() -> void:
+	if rec_is_pw_mode:
+		var res := AuthManager.reset_password(rec_user_edit.text, rec_key_edit.text, rec_new_pw_edit.text)
+		if res.get("success", false):
+			rec_feedback_lbl.text = "✅ " + str(res.get("message", ""))
+			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
+			if auth_user_edit != null:
+				auth_user_edit.text = rec_user_edit.text.strip_edges()
+			if auth_pass_edit != null:
+				auth_pass_edit.text = ""
+		else:
+			rec_feedback_lbl.text = "❌ " + str(res.get("message", ""))
+			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
+	else:
+		var res := AuthManager.find_usernames_by_recovery(rec_key_edit.text)
+		if res.get("success", false):
+			rec_feedback_lbl.text = "✅ " + str(res.get("message", ""))
+			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
+			var found: Array = res.get("usernames", [])
+			if not found.is_empty() and auth_user_edit != null:
+				auth_user_edit.text = str(found[0])
+		else:
+			rec_feedback_lbl.text = "❌ " + str(res.get("message", ""))
+			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
 
 func _on_guest_login() -> void:
 	var res: Dictionary = AuthManager.guest_login()
