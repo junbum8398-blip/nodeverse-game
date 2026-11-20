@@ -368,7 +368,7 @@ func _on_start_current_scene_bot() -> void:
 	if sc == null:
 		stop_bot()
 		return
-	var spath := sc.get_script().resource_path if sc.get_script() else ""
+	var spath: String = str(sc.get_script().resource_path) if sc.get_script() else ""
 	if spath == "res://scripts/nodeverse_world.gd":
 		await _run_full_scenario_tour(token)
 	elif spath == "res://scripts/main_menu.gd":
@@ -467,18 +467,18 @@ func _run_full_scenario_tour(token: int) -> void:
 	# ------------------------------------------------------------------------
 	_set_live_status("[Step 1/5] 현재 위치에서 가까운 NPC에게 이동 중", "봇이 로봇 캐릭터를 직접 걸어서 NPC 앞으로 이동합니다...")
 	var target_npc: Node3D = null
-	var best_npc_d := INF
+	var best_npc_d: float = INF
 	for npc in world.spawned_npcs:
 		if is_instance_valid(npc):
-			var d := world.player.global_position.distance_to(npc.global_position)
+			var d: float = world.player.global_position.distance_to(npc.global_position)
 			if d < best_npc_d:
 				best_npc_d = d
 				target_npc = npc
 	if target_npc != null:
 		if best_npc_d > 22.0:
 			# If player is very far, move onto the same island nearby first, then walk the last 8m visibly
-			var approach_start := target_npc.global_position + Vector3(4.5, 0.1, 4.5)
-			world.player.teleport_to(Vector3(approach_start.x, world.TOP + 0.1, approach_start.z))
+			var approach_start: Vector3 = target_npc.global_position + Vector3(4.5, 0.1, 4.5)
+			world.player.teleport_to(Vector3(approach_start.x, float(world.TOP) + 0.1, approach_start.z))
 		var npc_name_str := String(target_npc.get_meta("npc_name", "NPC"))
 		_set_live_status("[Step 1/5] 3D 로봇 이동 -> " + npc_name_str, "WASD 이동 입력으로 [%s] 앞으로 걸어갑니다..." % npc_name_str)
 		await _walk_3d_player_to(world, target_npc.global_position + Vector3(1.2, 0, 1.0), 1.8, token)
@@ -642,7 +642,7 @@ func _play_current_2d_stage(token: int, max_levels: int = 2) -> void:
 	var stage := get_tree().current_scene
 	if stage == null:
 		return
-	var spath := stage.get_script().resource_path if stage.get_script() else ""
+	var spath: String = str(stage.get_script().resource_path) if stage.get_script() else ""
 
 	if spath == "res://scripts/play/st01_array_stage.gd":
 		await _play_visual_st01(stage, token, max_levels)
