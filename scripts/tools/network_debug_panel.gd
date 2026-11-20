@@ -49,10 +49,28 @@ func _setup_ui() -> void:
 	ping_btn.pressed.connect(_on_ping_pressed)
 	test_btn.pressed.connect(_on_test_send_pressed)
 	clear_btn.pressed.connect(_on_clear_log_pressed)
-	
+
+	var btn_row := $Panel/VBox/ConfigSection/BtnRow
+	if btn_row:
+		var bot_btn := Button.new()
+		bot_btn.name = "BotVerifyBtn"
+		bot_btn.text = "🤖 시나리오 봇 검증"
+		bot_btn.custom_minimum_size = Vector2(145, 32)
+		bot_btn.focus_mode = Control.FOCUS_NONE
+		bot_btn.pressed.connect(_on_bot_verify_pressed)
+		btn_row.add_child(bot_btn)
+
+		var pdf_btn := Button.new()
+		pdf_btn.name = "OpenPdfBtn"
+		pdf_btn.text = "📄 결과서 PDF"
+		pdf_btn.custom_minimum_size = Vector2(115, 32)
+		pdf_btn.focus_mode = Control.FOCUS_NONE
+		pdf_btn.pressed.connect(_on_open_pdf_pressed)
+		btn_row.add_child(pdf_btn)
+
 	var close_btn = $Panel/VBox/Header/CloseBtn
 	if close_btn:
-		close_btn.pressed.connect(func(): panel_root.visible = false)
+		close_btn.pressed.connect(_on_close_panel)
 
 func _connect_signals() -> void:
 	if _net_mgr:
@@ -174,3 +192,65 @@ func _rebuild_log_view() -> void:
 	var logs: Array = _net_mgr.call("get_logs")
 	for entry in logs:
 		_on_log_appended(entry)
+
+func _on_close_panel() -> void:
+	panel_root.visible = false
+
+func _on_bot_verify_pressed() -> void:
+	_update_status_display("SENDING", "시나리오 봇(S01~S16) 자동 검증 실행 중...")
+	if _net_mgr and _net_mgr.has_method("log_message"):
+		_net_mgr.call("log_message", "=== [시나리오 봇 자동 검증(S01~S16) 실행 시작] ===", "info")
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var proj_dir := ProjectSettings.globalize_path("res://")
+	var py_script := proj_dir.path_join("tools/run_scenario_verification.py")
+	var out_arr: Array = []
+	var exit_code := OS.execute("python", [py_script, "--scenario", "scenarios/default_full_scenario.json"], out_arr, true)
+
+	var report_path := "res://output/reports/latest_bot_result.json"
+	if FileAccess.file_exists(report_path):
+		var raw := FileAccess.get_file_as_string(report_path)
+		var parsed = JSON.parse_string(raw)
+		if parsed is Dictionary:
+			var summary: Dictionary = parsed.get("summary", {})
+			var steps: Array = parsed.get("steps", [])
+			for st in steps:
+				if st is Dictionary:
+					var ok := bool(st.get("passed", false))
+					var msg := "[%s] %s (%s) %s -> %s (%dms)" % [
+						"PASS" if ok else "FAIL",
+						str(st.get("step_id", "")),
+						str(st.get("category", "")),
+						str(st.get("name", "")),
+						str(st.get("actual", "")),
+						int(st.get("duration_ms", 0))
+					]
+					if _net_mgr and _net_mgr.has_method("log_message"):
+						_net_mgr.call("log_message", msg, "success" if ok else "error")
+			var sum_msg := "=== [시나리오 봇 검증 완료: %d/%d PASS (%.1f%%) · 총 %dms · PDF 결과서 갱신됨] ===" % [
+				int(summary.get("passed_steps", 0)),
+				int(summary.get("total_steps", 0)),
+				float(summary.get("pass_rate_percent", 0.0)),
+				int(summary.get("total_duration_ms", 0))
+			]
+			if _net_mgr and _net_mgr.has_method("log_message"):
+				_net_mgr.call("log_message", sum_msg, "success" if exit_code == 0 else "error")
+			_update_status_display("CONNECTED" if exit_code == 0 else "ERROR", "봇 검증 완료 (%d/%d PASS)" % [
+				int(summary.get("passed_steps", 0)),
+				int(summary.get("total_steps", 0))
+			])
+			return
+
+	_update_status_display("ERROR", "시나리오 봇 실행 결과를 읽지 못했습니다 (code=%d)" % exit_code)
+
+func _on_open_pdf_pressed() -> void:
+	var pdf_rel := "res://output/reports/NODEVERSE_자동화봇_테스트결과서.pdf"
+	var pdf_global := ProjectSettings.globalize_path(pdf_rel)
+	if FileAccess.file_exists(pdf_rel):
+		OS.shell_open(pdf_global)
+		if _net_mgr and _net_mgr.has_method("log_message"):
+			_net_mgr.call("log_message", "테스트 결과서 PDF 열기: " + pdf_global, "info")
+	else:
+		if _net_mgr and _net_mgr.has_method("log_message"):
+			_net_mgr.call("log_message", "결과서 PDF가 아직 없습니다. 먼저 [🤖 시나리오 봇 검증]을 눌러주세요.", "warn")
