@@ -1,0 +1,268 @@
+{
+  "meta": {
+    "scenario_id": "NV-BOT-E2E-001",
+    "title": "NODEVERSE 전 구간 시나리오 기반 자동화 봇(시뮬레이터) 통합 기능 검증",
+    "version": "1.0.0",
+    "mode": "headless",
+    "django_url": "http://192.168.0.29:8000",
+    "collector_url": "http://192.168.0.81:8000"
+  },
+  "steps": [
+    {
+      "step_id": "S01",
+      "category": "AUTH",
+      "name": "신규 회원가입 · 중복 차단 · SHA-256 해시 저장 검증",
+      "action": "auth_register",
+      "params": {
+        "username": "qa_bot_tester",
+        "password": "bot_pass_2026",
+        "recovery_key": "qa_bot@nodeverse.io"
+      },
+      "expect": {
+        "register_ok": true,
+        "duplicate_blocked": true,
+        "password_hashed": true,
+        "no_plaintext": true
+      }
+    },
+    {
+      "step_id": "S02",
+      "category": "AUTH",
+      "name": "복구 키(이메일/별명) 기반 아이디 찾기 및 불일치 차단 검증",
+      "action": "auth_find_id",
+      "params": {
+        "username": "qa_bot_tester",
+        "recovery_key": "qa_bot@nodeverse.io",
+        "wrong_recovery_key": "wrong_user@nodeverse.io"
+      },
+      "expect": {
+        "found_username": "qa_bot_tester",
+        "wrong_key_blocked": true
+      }
+    },
+    {
+      "step_id": "S03",
+      "category": "AUTH",
+      "name": "복구 키 검증 후 비밀번호 재설정 및 구 비밀번호 차단 검증",
+      "action": "auth_reset_password",
+      "params": {
+        "username": "qa_bot_tester",
+        "recovery_key": "qa_bot@nodeverse.io",
+        "old_password": "bot_pass_2026",
+        "new_password": "bot_new_pass_999"
+      },
+      "expect": {
+        "reset_ok": true,
+        "old_login_blocked": true
+      }
+    },
+    {
+      "step_id": "S04",
+      "category": "AUTH",
+      "name": "재설정된 새 비밀번호 로그인 및 세션 활성화 검증",
+      "action": "auth_login",
+      "params": {
+        "username": "qa_bot_tester",
+        "password": "bot_new_pass_999"
+      },
+      "expect": {
+        "login_ok": true,
+        "username": "qa_bot_tester"
+      }
+    },
+    {
+      "step_id": "S05",
+      "category": "SAVE",
+      "name": "3D 위치·점수·2D 미니게임 별점 클라우드/로컬 저장 및 이어하기 복원 검증",
+      "action": "save_and_continue",
+      "params": {
+        "username": "qa_bot_tester",
+        "password": "bot_new_pass_999",
+        "score": 350,
+        "zone": "SQL",
+        "player_pos": [18.5, 1.08, -24.2],
+        "minigame_cleared": {
+          "ST01": 3,
+          "SQL01": 2,
+          "ALG01": 3
+        }
+      },
+      "expect": {
+        "restored_score": 350,
+        "restored_zone": "SQL",
+        "restored_stars_match": true
+      }
+    },
+    {
+      "step_id": "S06",
+      "category": "SAVE",
+      "name": "처음부터 시작(New Game) 선택 시 점수·위치·미니게임 별점 완전 초기화 검증",
+      "action": "reset_new_game",
+      "params": {
+        "username": "qa_bot_tester",
+        "difficulty": "ADVANCED"
+      },
+      "expect": {
+        "score": 0,
+        "zone": "MAIN",
+        "minigame_cleared_empty": true,
+        "has_saved_game": false
+      }
+    },
+    {
+      "step_id": "S07",
+      "category": "WORLD",
+      "name": "3D 월드 7개 섬 빌드 및 4대 컴퓨터 터미널(DS/ALGO/SQL/DATA) 카테고리 격리 라우팅 검증",
+      "action": "world_terminals",
+      "params": {
+        "expected_zones": ["DS", "ALGO", "SQL", "DATA"]
+      },
+      "expect": {
+        "terminals_verified": 4,
+        "category_isolated": true,
+        "return_to_world_ok": true
+      }
+    },
+    {
+      "step_id": "S08",
+      "category": "MINIGAME",
+      "name": "워킹형 스테이지 10종(ST01~ST10) 봇 자동 풀이 · 오답 주입 · Undo(Z) · 별점 차감 검증",
+      "action": "play_minigame_group",
+      "params": {
+        "group": "WALK_STAGES",
+        "stages": ["ST01", "ST02", "ST03", "ST04", "ST05", "ST06", "ST07", "ST08", "ST09", "ST10"],
+        "inject_mistakes": 1,
+        "use_undo": true,
+        "use_hint": true
+      },
+      "expect": {
+        "all_cleared": true,
+        "stage_count": 10,
+        "mistake_star_deduction_ok": true
+      }
+    },
+    {
+      "step_id": "S09",
+      "category": "MINIGAME",
+      "name": "자료구조 조립형 실습 2종(DS09 트리, DS10 그래프) 전 레벨 봇 자동 풀이 · 오답/되돌리기 검증",
+      "action": "play_minigame_group",
+      "params": {
+        "group": "DS_LABS",
+        "stages": ["DS09", "DS10"],
+        "inject_mistakes": 1,
+        "use_undo": true
+      },
+      "expect": {
+        "all_cleared": true,
+        "stage_count": 2
+      }
+    },
+    {
+      "step_id": "S10",
+      "category": "MINIGAME",
+      "name": "알고리즘 실습 4종(ALG01 정렬, ALG02 탐색, ALG03 분할정복, ALG04 최단경로) 봇 자동 풀이 검증",
+      "action": "play_minigame_group",
+      "params": {
+        "group": "ALGO_LABS",
+        "stages": ["ALG01", "ALG02", "ALG03", "ALG04"],
+        "inject_mistakes": 1
+      },
+      "expect": {
+        "all_cleared": true,
+        "stage_count": 4
+      }
+    },
+    {
+      "step_id": "S11",
+      "category": "MINIGAME",
+      "name": "SQL 5x5 서랍 실습 4종(SQL01~SQL04, 총 12개 레벨) 봇 자동 풀이 · 오답 차단 · Undo 복원 검증",
+      "action": "play_minigame_group",
+      "params": {
+        "group": "SQL_LABS",
+        "stages": ["SQL01", "SQL02", "SQL03", "SQL04"],
+        "inject_mistakes": 1,
+        "use_undo": true
+      },
+      "expect": {
+        "all_cleared": true,
+        "stage_count": 4,
+        "levels_solved": 12
+      }
+    },
+    {
+      "step_id": "S12",
+      "category": "MINIGAME",
+      "name": "데이터 탐색 실습 4종(DATA01 정제, DATA02 점검, DATA03 통계, DATA04 차트) 봇 자동 풀이 검증",
+      "action": "play_minigame_group",
+      "params": {
+        "group": "DATA_LABS",
+        "stages": ["DATA01", "DATA02", "DATA03", "DATA04"],
+        "inject_mistakes": 1,
+        "use_undo": true
+      },
+      "expect": {
+        "all_cleared": true,
+        "stage_count": 4
+      }
+    },
+    {
+      "step_id": "S13",
+      "category": "TELEMETRY",
+      "name": "학습 이벤트 스키마 v2 (8종 이벤트, 24종 ID 매핑, 허용 키 9종 필터링, 2KB 제한, ms UTC) 검증",
+      "action": "schema_v2_contract",
+      "params": {
+        "check_24_games": true,
+        "inject_forbidden_keys": ["secret_token", "raw_password", "huge_dump"],
+        "oversize_bytes": 4096
+      },
+      "expect": {
+        "schema_version": 2,
+        "mapped_games": 24,
+        "forbidden_keys_stripped": true,
+        "details_under_2kb": true,
+        "ms_utc_format_ok": true
+      }
+    },
+    {
+      "step_id": "S14",
+      "category": "TELEMETRY",
+      "name": "디스크 큐 수명주기 (pending 생성 → 401/422 수신 시 rejected 격리 → 202 수신 시 삭제) 검증",
+      "action": "disk_queue_lifecycle",
+      "params": {
+        "simulate_codes": [422, 202]
+      },
+      "expect": {
+        "pending_created": true,
+        "rejected_on_422": true,
+        "deleted_on_202": true
+      }
+    },
+    {
+      "step_id": "S15",
+      "category": "SYSTEM",
+      "name": "업데이트 매니저 버전 비교 · 업데이트 이벤트 9종 스키마 · 오프라인 무중단 base 폴백 검증",
+      "action": "update_manager_check",
+      "params": {
+        "test_versions": [["0.3.0", "0.4.0", -1], ["0.3.0", "0.3.0", 0], ["0.4.1", "0.4.0", 1]]
+      },
+      "expect": {
+        "version_cmp_ok": true,
+        "update_events_count": 9,
+        "fallback_content_version": "base"
+      }
+    },
+    {
+      "step_id": "S16",
+      "category": "SYSTEM",
+      "name": "정상 종료 마커(NODEVERSE_EXIT_MARKER / NODEVERSE_RUN_ID) 기록 및 테스트 계정 정리 검증",
+      "action": "exit_marker_check",
+      "params": {
+        "cleanup_user": "qa_bot_tester"
+      },
+      "expect": {
+        "marker_written": true,
+        "account_cleaned": true
+      }
+    }
+  ]
+}
