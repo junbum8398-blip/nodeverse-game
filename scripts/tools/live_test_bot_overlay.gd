@@ -678,33 +678,57 @@ func _ensure_3d_astar(world: Node) -> void:
 		return
 	_nav_astar = AStar2D.new()
 	var space: PhysicsDirectSpaceState3D = world.get_world_3d().direct_space_state
-	var step: float = 0.8
-	var x_min: int = -42
-	var x_max: int = 42
-	var z_min: int = -46
-	var z_max: int = 26
+	var step: float = 0.5
+	var x_min: int = -64
+	var x_max: int = 64
+	var z_min: int = -72
+	var z_max: int = 40
 	var valid: Dictionary = {}
 
 	for ix in range(x_min, x_max + 1):
 		for iz in range(z_min, z_max + 1):
 			var p := Vector3(float(ix) * step, 1.0, float(iz) * step)
-			var q := PhysicsRayQueryParameters3D.create(p + Vector3(0, 3.0, 0), p - Vector3(0, 2.0, 0))
+			var q := PhysicsRayQueryParameters3D.create(p + Vector3(0, 3.0, 0), p - Vector3(0, 1.0, 0))
 			if world.player != null:
 				q.exclude = [world.player.get_rid()]
 			var hit: Dictionary = space.intersect_ray(q)
 			if not hit.is_empty():
 				var hp: Vector3 = hit["position"]
 				var hn: Vector3 = hit["normal"]
-				if hp.y >= 0.35 and hp.y <= 2.15 and hn.y >= 0.55:
+				# Walkable floor & bridge deck ONLY (0.85 .. 1.48), strictly excluding bridge railings (1.78+) and props
+				if hp.y >= 0.85 and hp.y <= 1.48 and hn.y >= 0.7:
 					var pid: int = (ix - x_min) * 1000 + (iz - z_min)
 					_nav_astar.add_point(pid, Vector2(p.x, p.z))
 					valid[Vector2i(ix, iz)] = pid
 
+	# Penalize edge nodes so A* stays right in the center of bridges and paths
 	for cell in valid.keys():
 		var pid: int = valid[cell]
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
+		var card_count: int = 0
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if valid.has(cell + d):
+				card_count += 1
+		var diag_count: int = 0
+		for d in [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
+			if valid.has(cell + d):
+				diag_count += 1
+		var w_scale: float = 1.0
+		if card_count < 4:
+			w_scale = 5.0
+		elif diag_count < 4:
+			w_scale = 2.2
+		_nav_astar.set_point_weight_scale(pid, w_scale)
+
+	# Connect cardinal neighbors, and diagonal ONLY when both adjacent cardinals are valid floor (prevents corner cutting)
+	for cell in valid.keys():
+		var pid: int = valid[cell]
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			var nb: Vector2i = cell + d
 			if valid.has(nb):
+				_nav_astar.connect_points(pid, valid[nb], false)
+		for d in [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
+			var nb: Vector2i = cell + d
+			if valid.has(nb) and valid.has(cell + Vector2i(d.x, 0)) and valid.has(cell + Vector2i(0, d.y)):
 				_nav_astar.connect_points(pid, valid[nb], false)
 
 func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, token: int) -> void:
@@ -726,7 +750,7 @@ func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, toke
 	waypoints.append(target_pos)
 
 	var wp_idx: int = 0
-	var max_time: float = 35.0
+	var max_time: float = 40.0
 	var elapsed: float = 0.0
 	var stuck_timer: float = 0.0
 	var prev_pos: Vector3 = p.global_position
@@ -741,9 +765,10 @@ func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, toke
 
 		var wp: Vector3 = waypoints[wp_idx]
 		var diff := Vector3(wp.x - cur.x, 0.0, wp.z - cur.z)
-		var reach_r: float = stop_dist if wp_idx == waypoints.size() - 1 else 0.75
+		var reach_r: float = stop_dist if wp_idx == waypoints.size() - 1 else 0.42
 		if diff.length() <= reach_r:
 			wp_idx += 1
+			stuck_timer = 0.0
 			continue
 
 		var dir3 := diff.normalized()
@@ -754,20 +779,17 @@ func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, toke
 		var iy := dir3.dot(fwd)
 		p.bot_move_dir = Vector2(ix, iy).normalized()
 		if "bot_sprint" in p:
-			p.bot_sprint = (dist_to_final > 4.0 or speed_mult > 1.0)
+			p.bot_sprint = (dist_to_final > 3.5 or speed_mult > 1.0)
 
 		await get_tree().physics_frame
 		var dt := get_physics_process_delta_time()
 		elapsed += dt
 
-		# Nudge around tight corners if physics velocity is momentarily blocked by a prop collider
-		if p.global_position.distance_to(prev_pos) < 0.015:
+		if p.global_position.distance_to(prev_pos) < 0.01:
 			stuck_timer += dt
-			if stuck_timer > 0.25:
-				p.global_position = p.global_position.move_toward(Vector3(wp.x, p.global_position.y, wp.z), 0.25)
-				if stuck_timer > 0.65 and wp_idx < waypoints.size() - 1:
-					wp_idx += 1
-					stuck_timer = 0.0
+			if stuck_timer > 0.45 and wp_idx < waypoints.size() - 1:
+				wp_idx += 1
+				stuck_timer = 0.0
 		else:
 			stuck_timer = 0.0
 		prev_pos = p.global_position
