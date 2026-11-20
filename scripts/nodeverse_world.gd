@@ -1509,6 +1509,7 @@ static func return_from_2d(tree: SceneTree) -> bool:
 	return true
 
 func _on_returned_from_2d() -> void:
+	_save_current_state()
 	if player != null:
 		if saved_player_pos != Vector3.ZERO:
 			player.teleport_to(saved_player_pos)
@@ -2442,14 +2443,20 @@ func _refresh_pause_menu_ui() -> void:
 			quiz_score
 		]
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if game_state == GameState.PLAYING or game_state == GameState.PAUSED_MENU:
+			_save_current_state()
+
 func _save_current_state() -> void:
 	if current_user.is_empty():
 		return
-	var pp: Vector3 = player.global_position if player != null else Vector3(0.0, 0.55, 1.6)
+	var pp: Vector3 = player.global_position if player != null else Vector3(0.0, 1.08, 12.15)
 	user_save_data["difficulty"] = current_difficulty
 	user_save_data["score"] = quiz_score
 	user_save_data["player_pos"] = [pp.x, pp.y, pp.z]
 	user_save_data["zone"] = _zone_name
+	user_save_data["minigame_cleared"] = MiniGameBase.get_account_progress()
 	user_save_data["has_saved_game"] = true
 	AuthManager.save_user_progress(current_user, user_save_data)
 
@@ -2781,9 +2788,16 @@ func _on_guest_login() -> void:
 
 func _on_login_success(username: String, save_data: Dictionary) -> void:
 	current_user = username
-	user_save_data = save_data
-	current_difficulty = str(save_data.get("difficulty", "NOVICE"))
-	quiz_score = int(save_data.get("score", 0))
+	user_save_data = save_data.duplicate(true)
+	current_difficulty = str(user_save_data.get("difficulty", "NOVICE"))
+	quiz_score = int(user_save_data.get("score", 0))
+	var mg_cleared = user_save_data.get("minigame_cleared", {})
+	MiniGameBase.set_account_progress(mg_cleared if mg_cleared is Dictionary else {})
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm:
+		nm.call("_update_player_id")
+		if username != "Guest":
+			nm.call("sync_player_login", AuthManager.get_user_id(username), username)
 	_set_game_state(GameState.DIFFICULTY_SELECT)
 
 func _build_lobby_modal(canvas: CanvasLayer) -> void:
@@ -2884,6 +2898,19 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	var cont_spacer := Control.new()
 	cont_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cont_row.add_child(cont_spacer)
+
+	var new_game_btn := Button.new()
+	new_game_btn.text = "처음부터 시작"
+	new_game_btn.custom_minimum_size = Vector2(116, 38)
+	new_game_btn.add_theme_font_size_override("font_size", 13.0)
+	_apply_btn_styles(new_game_btn,
+		Color(0.95, 0.92, 0.86),
+		Color(0.91, 0.87, 0.79),
+		Color(0.20, 0.30, 0.32),
+		Color(0.80, 0.76, 0.68), 8, 1
+	)
+	new_game_btn.pressed.connect(func(): _on_start_new_game(current_difficulty))
+	cont_row.add_child(new_game_btn)
 
 	continue_btn = Button.new()
 	continue_btn.text = "이어서 탐험  →"
@@ -2998,9 +3025,27 @@ func _on_select_difficulty(diff_key: String) -> void:
 	_set_game_state(GameState.PLAYING)
 	_show_msg("⚔️ [%s] 난이도로 게임을 시작합니다!" % current_difficulty, 3.0)
 
+func _on_start_new_game(diff_key: String) -> void:
+	current_difficulty = diff_key
+	user_save_data = AuthManager.reset_user_progress(current_user, current_difficulty)
+	quiz_score = 0
+	quiz_index.clear()
+	MiniGameBase.clear_account_progress()
+	var sql_drawer_cls = load("res://scripts/minigames/sql_drawer.gd")
+	if sql_drawer_cls:
+		sql_drawer_cls.saved.clear()
+	if player != null:
+		player.teleport_to(player.spawn_point)
+	_zone_name = "MAIN"
+	_save_current_state()
+	_set_game_state(GameState.PLAYING)
+	_show_msg("✨ [%s] 처음부터 새로운 여정을 시작합니다!" % current_difficulty, 3.0)
+
 func _on_continue_game() -> void:
 	current_difficulty = str(user_save_data.get("difficulty", "NOVICE"))
 	quiz_score = int(user_save_data.get("score", 0))
+	var mg_cleared = user_save_data.get("minigame_cleared", {})
+	MiniGameBase.set_account_progress(mg_cleared if mg_cleared is Dictionary else {})
 	var ppos: Variant = user_save_data.get("player_pos", null)
 	if ppos is Array and ppos.size() >= 3:
 		var saved_position := Vector3(float(ppos[0]), float(ppos[1]), float(ppos[2]))

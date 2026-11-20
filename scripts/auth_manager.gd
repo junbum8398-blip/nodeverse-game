@@ -189,3 +189,47 @@ static func get_user_progress(username: String) -> Dictionary:
 static func get_last_user() -> String:
 	var store := _get_store()
 	return store.get("last_user", "")
+
+## Get ASCII member_id (UUID) for server /api/game/player-login
+static func get_user_id(username: String) -> String:
+	var uname := username.strip_edges()
+	var store := _get_store()
+	var users: Dictionary = store.get("users", {})
+	if users.has(uname) and users[uname] is Dictionary:
+		var uid := str(users[uname].get("user_id", "")).strip_edges()
+		if not uid.is_empty():
+			return uid
+	return _generate_uuid_v4()
+
+## Store server-assigned player_id returned by POST /api/game/player-login
+static func set_server_player_id(username: String, server_pid: String) -> void:
+	var uname := username.strip_edges()
+	var pid := server_pid.strip_edges()
+	if uname.is_empty() or pid.is_empty():
+		return
+	var store := _get_store()
+	var users: Dictionary = store.get("users", {})
+	if users.has(uname) and users[uname] is Dictionary:
+		users[uname]["server_player_id"] = pid
+		_save_store(store)
+
+## Reset user progress cleanly for "Start From Scratch (처음부터 시작)"
+static func reset_user_progress(username: String, difficulty: String = "NOVICE") -> Dictionary:
+	var uname := username.strip_edges()
+	var fresh := {
+		"difficulty": difficulty,
+		"score": 0,
+		"cleared_quizzes": [],
+		"minigame_cleared": {},
+		"player_pos": [0.0, 1.08, 12.15],
+		"zone": "MAIN",
+		"has_saved_game": false
+	}
+	if uname.is_empty():
+		return fresh
+	var store := _get_store()
+	var users: Dictionary = store.get("users", {})
+	if users.has(uname) and users[uname] is Dictionary:
+		users[uname]["save_data"] = fresh.duplicate(true)
+		_save_store(store)
+	return fresh

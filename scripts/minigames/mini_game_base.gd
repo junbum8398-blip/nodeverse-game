@@ -36,6 +36,24 @@ static func load_progress() -> void:
 		for id in data:
 			cleared[id] = maxi(int(cleared.get(id, 0)), int(data[id]))
 
+static func set_account_progress(data: Dictionary) -> void:
+	cleared.clear()
+	_progress_loaded = true
+	for id in data:
+		cleared[str(id)] = clampi(int(data[id]), 0, 3)
+
+static func get_account_progress() -> Dictionary:
+	return cleared.duplicate(true)
+
+static func clear_account_progress() -> void:
+	cleared.clear()
+	_progress_loaded = true
+	if not progress_saving:
+		return
+	var f := FileAccess.open(PROGRESS_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string("{}")
+
 static func record_clear(id: String, star_count: int) -> void:
 	cleared[id] = maxi(int(cleared.get(id, 0)), star_count)
 	if not progress_saving:
@@ -43,6 +61,13 @@ static func record_clear(id: String, star_count: int) -> void:
 	var f := FileAccess.open(PROGRESS_PATH, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(cleared))
+	var auth_cls = load("res://scripts/auth_manager.gd")
+	if auth_cls:
+		var last_u: String = str(auth_cls.get_last_user())
+		if not last_u.is_empty():
+			var sd: Dictionary = auth_cls.get_user_progress(last_u)
+			sd["minigame_cleared"] = cleared.duplicate(true)
+			auth_cls.save_user_progress(last_u, sd)
 
 var stage_id := "ST00"
 var stage_title := ""

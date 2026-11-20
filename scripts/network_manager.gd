@@ -191,12 +191,53 @@ func _update_player_id() -> void:
 		var u = str(store.get("last_user", "")).strip_edges()
 		if not u.is_empty() and u != "Guest":
 			var users: Dictionary = store.get("users", {})
-			if users.has(u) and users[u] is Dictionary and users[u].has("user_id"):
-				player_id = str(users[u]["user_id"])
-				return
+			if users.has(u) and users[u] is Dictionary:
+				if not str(users[u].get("server_player_id", "")).is_empty():
+					player_id = str(users[u]["server_player_id"])
+					return
+				if users[u].has("user_id"):
+					player_id = str(users[u]["user_id"])
+					return
 			player_id = u
 			return
 	player_id = _get_or_create_install_id()
+
+## Sync verified player login with Dashboard Django API: POST /api/game/player-login
+## Gracefully falls back to local UUID if server is offline or GAME_SERVER_API_KEY is unset.
+func sync_player_login(member_id: String, display_name: String) -> void:
+	var mid := member_id.strip_edges()
+	var dname := display_name.strip_edges()
+	if mid.is_empty() or dname.is_empty():
+		return
+	if not auto_send_enabled or DisplayServer.get_name() == "headless":
+		return
+	var req := HTTPRequest.new()
+	req.timeout = request_timeout
+	add_child(req)
+	var url := get_base_url() + "/api/game/player-login"
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Authorization: Bearer %s" % auth_token
+	])
+	var payload := JSON.stringify({"member_id": mid, "display_name": dname})
+	req.request_completed.connect(func(result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray):
+		req.queue_free()
+		if result == HTTPRequest.RESULT_SUCCESS and (code == 200 or code == 201):
+			var parsed = JSON.parse_string(body.get_string_from_utf8())
+			if parsed is Dictionary and parsed.get("player") is Dictionary:
+				var server_pid := str(parsed["player"].get("player_id", "")).strip_edges()
+				if not server_pid.is_empty():
+					player_id = server_pid
+					var auth_cls = load("res://scripts/auth_manager.gd")
+					if auth_cls:
+						auth_cls.set_server_player_id(dname, server_pid)
+					log_message("서버 플레이어 로그인 연동 완료 (%s -> %s)" % [dname, server_pid], "success")
+					return
+		log_message("서버 로그인 연동 대기/오프라인 (코드: %d, 로컬 계정으로 정상 진행)" % code, "info")
+	)
+	var err := req.request(url, headers, HTTPClient.METHOD_POST, payload)
+	if err != OK:
+		req.queue_free()
 
 func set_content_version(ver: String) -> void:
 	content_version = ver.strip_edges() if not ver.strip_edges().is_empty() else "base"
