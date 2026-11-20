@@ -590,7 +590,7 @@ func _run_full_scenario_tour(token: int) -> void:
 		if is_instance_valid(island_npc):
 			var npc_name_str := String(island_npc.get_meta("npc_name", "NPC"))
 			_set_live_status("%s 다리를 건너 NPC에게 걸어가는 중" % step_prefix, "순간이동 없이 다리와 길을 따라 [%s] 앞으로 걸어갑니다..." % npc_name_str)
-			await _walk_3d_player_to(world, island_npc.global_position + Vector3(1.1, 0, 1.1), 1.75, token)
+			await _walk_3d_player_to(world, island_npc.global_position, 1.85, token)
 			if stop_requested or token != _run_token:
 				return
 			_set_live_status("%s NPC 대화 진행" % step_prefix, "[%s] 앞에서 [E] 키를 눌러 대화합니다..." % npc_name_str)
@@ -678,12 +678,30 @@ func _ensure_3d_astar(world: Node) -> void:
 		return
 	_nav_astar = AStar2D.new()
 	var space: PhysicsDirectSpaceState3D = world.get_world_3d().direct_space_state
+
+	# Exclude Ground and Bridge floor StaticBody3Ds from the 3D obstacle cylinder query
+	var floor_rids: Array[RID] = []
+	if world.player != null:
+		floor_rids.append(world.player.get_rid())
+	for n in world.find_children("*", "StaticBody3D", true, false):
+		var sb := n as StaticBody3D
+		if sb != null and (sb.name == "Ground" or "Bridge" in sb.name or (sb.get_parent() and "Bridge" in sb.get_parent().name)):
+			floor_rids.append(sb.get_rid())
+
+	var cyl := CylinderShape3D.new()
+	cyl.radius = 0.36
+	cyl.height = 0.96
+	var sq := PhysicsShapeQueryParameters3D.new()
+	sq.shape = cyl
+	sq.exclude = floor_rids
+
 	var step: float = 0.5
-	var x_min: int = -64
-	var x_max: int = 64
-	var z_min: int = -72
-	var z_max: int = 40
+	var x_min: int = -66
+	var x_max: int = 66
+	var z_min: int = -74
+	var z_max: int = 42
 	var valid: Dictionary = {}
+	var pos_map: Dictionary = {}
 
 	for ix in range(x_min, x_max + 1):
 		for iz in range(z_min, z_max + 1):
@@ -692,44 +710,87 @@ func _ensure_3d_astar(world: Node) -> void:
 			if world.player != null:
 				q.exclude = [world.player.get_rid()]
 			var hit: Dictionary = space.intersect_ray(q)
-			if not hit.is_empty():
-				var hp: Vector3 = hit["position"]
-				var hn: Vector3 = hit["normal"]
-				# Walkable floor & bridge deck ONLY (0.85 .. 1.48), strictly excluding bridge railings (1.78+) and props
-				if hp.y >= 0.85 and hp.y <= 1.48 and hn.y >= 0.7:
-					var pid: int = (ix - x_min) * 1000 + (iz - z_min)
-					_nav_astar.add_point(pid, Vector2(p.x, p.z))
-					valid[Vector2i(ix, iz)] = pid
+			if hit.is_empty():
+				continue
+			var hp: Vector3 = hit["position"]
+			var hn: Vector3 = hit["normal"]
+			# Walkable floor & bridge deck ONLY (0.85 .. 1.48), strictly excluding bridge railings (1.78+) and props
+			if hp.y < 0.85 or hp.y > 1.48 or hn.y < 0.72:
+				continue
+			# Check ankle-to-head 3D cylinder (radius=0.36m, y=gy+0.14..gy+1.10) against ALL props/obstacles/pedestals/lamps
+			sq.transform = Transform3D(Basis.IDENTITY, Vector3(p.x, hp.y + 0.62, p.z))
+			var col: Array = space.intersect_shape(sq, 1)
+			if not col.is_empty():
+				continue
+			# Keep robot out of the narrow interior pocket between the 5 graph pedestals on ALGO island
+			if p.z >= -18.8 and p.z <= -13.9 and p.x >= -2.7 and p.x <= 2.7:
+				continue
+			var pid: int = (ix - x_min) * 1000 + (iz - z_min)
+			valid[Vector2i(ix, iz)] = pid
+			pos_map[pid] = Vector2(p.x, p.z)
 
-	# Penalize edge nodes so A* stays right in the center of bridges and paths
+	# Build adjacency and flood-fill from Main Island spawn (0, 11) so disconnected pockets/traps are 100% removed
+	var adj: Dictionary = {}
 	for cell in valid.keys():
 		var pid: int = valid[cell]
-		var card_count: int = 0
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			if valid.has(cell + d):
-				card_count += 1
-		var diag_count: int = 0
-		for d in [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
-			if valid.has(cell + d):
-				diag_count += 1
-		var w_scale: float = 1.0
-		if card_count < 4:
-			w_scale = 5.0
-		elif diag_count < 4:
-			w_scale = 2.2
-		_nav_astar.set_point_weight_scale(pid, w_scale)
-
-	# Connect cardinal neighbors, and diagonal ONLY when both adjacent cardinals are valid floor (prevents corner cutting)
-	for cell in valid.keys():
-		var pid: int = valid[cell]
+		adj[pid] = []
 		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			var nb: Vector2i = cell + d
 			if valid.has(nb):
-				_nav_astar.connect_points(pid, valid[nb], false)
+				adj[pid].append(valid[nb])
 		for d in [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
 			var nb: Vector2i = cell + d
 			if valid.has(nb) and valid.has(cell + Vector2i(d.x, 0)) and valid.has(cell + Vector2i(0, d.y)):
-				_nav_astar.connect_points(pid, valid[nb], false)
+				adj[pid].append(valid[nb])
+
+	var seed_pid: int = -1
+	var best_seed_d: float = INF
+	for pid in pos_map.keys():
+		var d: float = (pos_map[pid] as Vector2).distance_to(Vector2(0.0, 11.0))
+		if d < best_seed_d:
+			best_seed_d = d
+			seed_pid = pid
+
+	var reachable: Dictionary = {}
+	if seed_pid != -1:
+		var queue: Array[int] = [seed_pid]
+		reachable[seed_pid] = true
+		var head: int = 0
+		while head < queue.size():
+			var cur_pid: int = queue[head]
+			head += 1
+			for nb_pid in adj[cur_pid]:
+				if not reachable.has(nb_pid):
+					reachable[nb_pid] = true
+					queue.append(nb_pid)
+
+	# Add only flood-fill reachable nodes and penalize edge nodes so A* stays in the center of bridges and paths
+	for cell in valid.keys():
+		var pid: int = valid[cell]
+		if not reachable.has(pid):
+			continue
+		_nav_astar.add_point(pid, pos_map[pid])
+		var card_count: int = 0
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var nb: Vector2i = cell + d
+			if valid.has(nb) and reachable.has(valid[nb]):
+				card_count += 1
+		var diag_count: int = 0
+		for d in [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
+			var nb: Vector2i = cell + d
+			if valid.has(nb) and reachable.has(valid[nb]):
+				diag_count += 1
+		var w_scale: float = 1.0
+		if card_count < 4:
+			w_scale = 6.0
+		elif diag_count < 4:
+			w_scale = 2.5
+		_nav_astar.set_point_weight_scale(pid, w_scale)
+
+	for pid in reachable.keys():
+		for nb_pid in adj[pid]:
+			if reachable.has(nb_pid):
+				_nav_astar.connect_points(pid, nb_pid, false)
 
 func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, token: int) -> void:
 	if world == null or world.player == null:
@@ -747,7 +808,8 @@ func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, toke
 	var waypoints: Array[Vector3] = []
 	for pt in raw_path:
 		waypoints.append(Vector3(pt.x, float(world.TOP) + 0.1, pt.y))
-	waypoints.append(target_pos)
+	if waypoints.is_empty():
+		waypoints.append(target_pos)
 
 	var wp_idx: int = 0
 	var max_time: float = 40.0
@@ -759,13 +821,13 @@ func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, toke
 		if stop_requested or token != _run_token or not is_instance_valid(p):
 			break
 		var cur := p.global_position
-		var dist_to_final := Vector2(target_pos.x - cur.x, target_pos.z - cur.z).length()
-		if dist_to_final <= stop_dist:
+		var dist_to_target := Vector2(target_pos.x - cur.x, target_pos.z - cur.z).length()
+		if dist_to_target <= stop_dist:
 			break
 
 		var wp: Vector3 = waypoints[wp_idx]
 		var diff := Vector3(wp.x - cur.x, 0.0, wp.z - cur.z)
-		var reach_r: float = stop_dist if wp_idx == waypoints.size() - 1 else 0.42
+		var reach_r: float = 0.35 if wp_idx == waypoints.size() - 1 else 0.42
 		if diff.length() <= reach_r:
 			wp_idx += 1
 			stuck_timer = 0.0
@@ -779,16 +841,18 @@ func _walk_3d_player_to(world: Node, target_pos: Vector3, stop_dist: float, toke
 		var iy := dir3.dot(fwd)
 		p.bot_move_dir = Vector2(ix, iy).normalized()
 		if "bot_sprint" in p:
-			p.bot_sprint = (dist_to_final > 3.5 or speed_mult > 1.0)
+			p.bot_sprint = (dist_to_target > 3.5 or speed_mult > 1.0)
 
 		await get_tree().physics_frame
 		var dt := get_physics_process_delta_time()
 		elapsed += dt
 
-		if p.global_position.distance_to(prev_pos) < 0.01:
+		if p.global_position.distance_to(prev_pos) < 0.008:
 			stuck_timer += dt
-			if stuck_timer > 0.45 and wp_idx < waypoints.size() - 1:
-				wp_idx += 1
+			if stuck_timer > 0.35:
+				# Re-path from current position or advance waypoint
+				if wp_idx < waypoints.size() - 1:
+					wp_idx += 1
 				stuck_timer = 0.0
 		else:
 			stuck_timer = 0.0
