@@ -1865,6 +1865,7 @@ func _build_ingame_hud(canvas: CanvasLayer) -> void:
 	top_h.add_child(profile_pill)
 
 	var pill_h := HBoxContainer.new()
+	pill_h.add_theme_constant_override("separation", 10)
 	profile_pill.add_child(pill_h)
 	profile_lbl = Label.new()
 	profile_lbl.text = "👤 GUEST"
@@ -1872,8 +1873,8 @@ func _build_ingame_hud(canvas: CanvasLayer) -> void:
 	pill_h.add_child(profile_lbl)
 
 	diff_badge_lbl = Label.new()
-	diff_badge_lbl.text = " [NOVICE] "
-	diff_badge_lbl.modulate = Color(0.4, 0.9, 0.7)
+	diff_badge_lbl.text = ""
+	diff_badge_lbl.visible = false
 	pill_h.add_child(diff_badge_lbl)
 
 	score_badge_lbl = Label.new()
@@ -1949,9 +1950,9 @@ func _refresh_profile_pill() -> void:
 	if profile_lbl == null:
 		return
 	profile_lbl.text = "👤 %s" % (current_user if current_user != "" else "GUEST")
-	var cfg: Dictionary = DIFFICULTY_CONFIG.get(current_difficulty, DIFFICULTY_CONFIG["NOVICE"])
-	diff_badge_lbl.text = " [%s] " % cfg["title"]
-	diff_badge_lbl.modulate = cfg["color"].lightened(0.35)
+	if diff_badge_lbl != null:
+		diff_badge_lbl.text = ""
+		diff_badge_lbl.visible = false
 	score_badge_lbl.text = "★ %d PTS" % quiz_score
 
 func _on_test_bot_btn_pressed() -> void:
@@ -2453,13 +2454,12 @@ func _refresh_lobby_ui() -> void:
 			)
 	if continue_info_lbl != null:
 		if has_save:
-			var d: String = str(user_save_data.get("difficulty", "NOVICE"))
 			var s: int = int(user_save_data.get("score", 0))
 			var z: String = str(user_save_data.get("zone", "MAIN"))
-			continue_info_lbl.text = "%s  ·  %d점  ·  최근 탐험: %s" % [d, s, z]
+			continue_info_lbl.text = "점수: %d점  ·  최근 탐험 구역: %s" % [s, z]
 			continue_info_lbl.add_theme_color_override("font_color", Color(0.353, 0.471, 0.447))
 		else:
-			continue_info_lbl.text = "(저장된 이전 여정이 없습니다. 아래에서 난이도를 선택해 새로운 모험을 시작하세요)"
+			continue_info_lbl.text = "(저장된 이전 여정이 없습니다. 처음부터 시작 버튼으로 새로운 모험을 시작하세요)"
 			continue_info_lbl.add_theme_color_override("font_color", Color(0.55, 0.60, 0.58))
 
 func _on_logout() -> void:
@@ -2472,9 +2472,8 @@ func _on_logout() -> void:
 
 func _refresh_pause_menu_ui() -> void:
 	if pause_info_lbl != null:
-		pause_info_lbl.text = "플레이어: %s | 난이도: [%s] | 점수: %d점" % [
+		pause_info_lbl.text = "플레이어: %s | 점수: %d점" % [
 			current_user if not current_user.is_empty() else "Guest",
-			current_difficulty,
 			quiz_score
 		]
 
@@ -2499,13 +2498,12 @@ func _save_current_state() -> void:
 		nm.call("sync_cloud_save", current_user, user_save_data)
 
 func _display_current_quiz(zone_tag: String, cur_num: int, total_num: int) -> void:
-	var cfg: Dictionary = DIFFICULTY_CONFIG.get(current_difficulty, DIFFICULTY_CONFIG["NOVICE"])
-	quiz_zone_tag.text = "🎯 [%s 퀴즈 - %s] (문제 %d / %d)" % [zone_tag, current_difficulty, cur_num, total_num]
-	quiz_zone_tag.modulate = cfg.get("color", Color.CYAN)
+	quiz_zone_tag.text = "🎯 [%s 퀴즈] (문제 %d / %d)" % [zone_tag, cur_num, total_num]
+	quiz_zone_tag.modulate = Color(0.25, 0.95, 1.0)
 	quiz_score_lbl.text = "점수: %d점" % quiz_score
 	quiz_title_lbl.text = str(current_quiz_item.get("title", ""))
 	quiz_question_lbl.text = str(current_quiz_item.get("question", ""))
-	quiz_feedback_lbl.text = "보기를 클릭하여 정답을 맞춰보세요! (정답 시 +%d점)" % int(cfg.get("pts", 10))
+	quiz_feedback_lbl.text = "보기를 클릭하여 정답을 맞춰보세요! (정답 시 +10점)"
 	quiz_feedback_lbl.modulate = Color(0.7, 0.85, 0.95)
 	quiz_next_btn.visible = false
 
@@ -2522,9 +2520,7 @@ func _display_current_quiz(zone_tag: String, cur_num: int, total_num: int) -> vo
 func _next_quiz() -> void:
 	var q_key: String = str(current_quiz_item.get("zone", "STACK")).to_upper()
 	if not quiz_dict.has(q_key): q_key = "STACK"
-	var target_diff: String = current_difficulty.to_lower()
-	var state_key: String = q_key + "_" + target_diff
-	quiz_index[state_key] = quiz_index.get(state_key, 0) + 1
+	quiz_index[q_key] = quiz_index.get(q_key, 0) + 1
 	_open_quiz_for_zone(_zone_name)
 
 func _build_title_modal(canvas: CanvasLayer) -> void:
@@ -3120,14 +3116,16 @@ func _on_guest_login() -> void:
 func _on_login_success(username: String, save_data: Dictionary) -> void:
 	current_user = username
 	user_save_data = save_data.duplicate(true)
-	current_difficulty = str(user_save_data.get("difficulty", "NOVICE"))
 	quiz_score = int(user_save_data.get("score", 0))
 	var mg_cleared = user_save_data.get("minigame_cleared", {})
 	MiniGameBase.set_account_progress(mg_cleared if mg_cleared is Dictionary else {})
 	var nm = get_node_or_null("/root/NetworkManager")
 	if nm:
 		nm.call("_update_player_id")
-	_set_game_state(GameState.DIFFICULTY_SELECT)
+	if bool(user_save_data.get("has_saved_game", false)):
+		_set_game_state(GameState.DIFFICULTY_SELECT)
+	else:
+		_on_start_new_game("NOVICE")
 
 func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	lobby_modal = Control.new()
@@ -3146,16 +3144,16 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	lobby_modal.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(1040, 640)
+	panel.custom_minimum_size = Vector2(620, 250)
 	panel.add_theme_stylebox_override("panel", _style_panel_flat(
-		Color(0.985, 0.973, 0.941, 0.98), # #fbf8f0
-		Color(0.86, 0.82, 0.75),            # #dcd2bf
+		Color(0.985, 0.973, 0.941, 0.98),
+		Color(0.86, 0.82, 0.75),
 		24, 28, 28, 2
 	))
 	center.add_child(panel)
 
 	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 16)
+	vb.add_theme_constant_override("separation", 18)
 	panel.add_child(vb)
 
 	# 1. 상단 헤더 행 (좌: 브레드크럼 + 환영 타이틀 / 우: 로그아웃 버튼)
@@ -3167,15 +3165,15 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	top_row.add_child(title_v)
 
 	var breadcrumb := Label.new()
-	breadcrumb.text = "NODEVERSE / 여정 선택"
+	breadcrumb.text = "NODEVERSE / 여정 시작"
 	breadcrumb.add_theme_font_size_override("font_size", 12.5)
-	breadcrumb.add_theme_color_override("font_color", Color(0.098, 0.482, 0.533)) # #197b88
+	breadcrumb.add_theme_color_override("font_color", Color(0.098, 0.482, 0.533))
 	title_v.add_child(breadcrumb)
 
 	welcome_lbl = Label.new()
 	welcome_lbl.text = "환영합니다, 모험가 님!"
 	welcome_lbl.add_theme_font_size_override("font_size", 24)
-	welcome_lbl.add_theme_color_override("font_color", Color(0.106, 0.188, 0.204)) # #1b3034
+	welcome_lbl.add_theme_color_override("font_color", Color(0.106, 0.188, 0.204))
 	title_v.add_child(welcome_lbl)
 
 	var top_spacer := Control.new()
@@ -3187,7 +3185,7 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	logout_btn.custom_minimum_size = Vector2(96, 36)
 	logout_btn.add_theme_font_size_override("font_size", 13.5)
 	_apply_btn_styles(logout_btn,
-		Color(0.929, 0.906, 0.843), # #ede7d7
+		Color(0.929, 0.906, 0.843),
 		Color(0.894, 0.867, 0.796),
 		Color(0.227, 0.259, 0.267),
 		Color(0.816, 0.776, 0.698), 10, 1.5
@@ -3195,12 +3193,12 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	logout_btn.pressed.connect(func(): _on_logout())
 	top_row.add_child(logout_btn)
 
-	# 2. [이전 여정 이어하기] 민트-크림 배너
+	# 2. [이전 여정 이어하기 / 처음부터 시작] 배너
 	var continue_panel := PanelContainer.new()
 	continue_panel.add_theme_stylebox_override("panel", _style_panel_flat(
-		Color(0.91, 0.945, 0.925), # #e8f1ec
-		Color(0.78, 0.86, 0.81),     # #c7dcce
-		12, 18, 12, 1
+		Color(0.91, 0.945, 0.925),
+		Color(0.78, 0.86, 0.81),
+		12, 18, 16, 1
 	))
 	vb.add_child(continue_panel)
 
@@ -3209,19 +3207,19 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	continue_panel.add_child(cont_row)
 
 	var cont_v := VBoxContainer.new()
-	cont_v.add_theme_constant_override("separation", 2)
+	cont_v.add_theme_constant_override("separation", 4)
 	cont_row.add_child(cont_v)
 
 	var cont_t := Label.new()
-	cont_t.text = "이전 여정 이어하기"
-	cont_t.add_theme_font_size_override("font_size", 14.5)
-	cont_t.add_theme_color_override("font_color", Color(0.110, 0.243, 0.227)) # #1c3e3a
+	cont_t.text = "여정 이어하기 / 새로 시작"
+	cont_t.add_theme_font_size_override("font_size", 15.0)
+	cont_t.add_theme_color_override("font_color", Color(0.110, 0.243, 0.227))
 	cont_v.add_child(cont_t)
 
 	continue_info_lbl = Label.new()
-	continue_info_lbl.text = "ARCHITECT · 40점 · 최근 탐험: MAIN"
-	continue_info_lbl.add_theme_font_size_override("font_size", 12.5)
-	continue_info_lbl.add_theme_color_override("font_color", Color(0.353, 0.471, 0.447)) # #5a7872
+	continue_info_lbl.text = "점수: 0점 · 최근 탐험 구역: MAIN"
+	continue_info_lbl.add_theme_font_size_override("font_size", 13.0)
+	continue_info_lbl.add_theme_color_override("font_color", Color(0.353, 0.471, 0.447))
 	cont_v.add_child(continue_info_lbl)
 
 	var cont_spacer := Control.new()
@@ -3230,21 +3228,21 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 
 	var new_game_btn := Button.new()
 	new_game_btn.text = "처음부터 시작"
-	new_game_btn.custom_minimum_size = Vector2(116, 38)
-	new_game_btn.add_theme_font_size_override("font_size", 13.0)
+	new_game_btn.custom_minimum_size = Vector2(124, 40)
+	new_game_btn.add_theme_font_size_override("font_size", 13.5)
 	_apply_btn_styles(new_game_btn,
 		Color(0.95, 0.92, 0.86),
 		Color(0.91, 0.87, 0.79),
 		Color(0.20, 0.30, 0.32),
 		Color(0.80, 0.76, 0.68), 8, 1
 	)
-	new_game_btn.pressed.connect(func(): _on_start_new_game(current_difficulty))
+	new_game_btn.pressed.connect(func(): _on_start_new_game("NOVICE"))
 	cont_row.add_child(new_game_btn)
 
 	continue_btn = Button.new()
 	continue_btn.text = "이어서 탐험  →"
-	continue_btn.custom_minimum_size = Vector2(120, 38)
-	continue_btn.add_theme_font_size_override("font_size", 13.5)
+	continue_btn.custom_minimum_size = Vector2(132, 40)
+	continue_btn.add_theme_font_size_override("font_size", 14.0)
 	_apply_btn_styles(continue_btn,
 		Color(0.102, 0.455, 0.510),
 		Color(0.125, 0.545, 0.612),
@@ -3253,108 +3251,14 @@ func _build_lobby_modal(canvas: CanvasLayer) -> void:
 	continue_btn.pressed.connect(func(): _on_continue_game())
 	cont_row.add_child(continue_btn)
 
-	# 3. 섹션 타이틀
-	var sec_title := Label.new()
-	sec_title.text = "나에게 맞는 탐험 난이도를 선택하세요"
-	sec_title.add_theme_font_size_override("font_size", 18)
-	sec_title.add_theme_color_override("font_color", Color(0.106, 0.188, 0.204))
-	vb.add_child(sec_title)
-
-	# 4. 3개 난이도 카드 행 (NOVICE, DEVELOPER, ARCHITECT)
-	var cards_row := HBoxContainer.new()
-	cards_row.add_theme_constant_override("separation", 16)
-	cards_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vb.add_child(cards_row)
-
-	for diff_key: String in ["NOVICE", "DEVELOPER", "ARCHITECT"]:
-		var cfg: Dictionary = DIFFICULTY_CONFIG[diff_key]
-		var card := PanelContainer.new()
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card.add_theme_stylebox_override("panel", _style_panel_flat(
-			Color.WHITE,
-			Color(0.871, 0.835, 0.761), # #ded5c2
-			16, 16, 16, 1
-		))
-		cards_row.add_child(card)
-
-		var cvb := VBoxContainer.new()
-		cvb.add_theme_constant_override("separation", 10)
-		card.add_child(cvb)
-
-		# 태그 (초급 / 모험가 등)
-		var tag_lbl := Label.new()
-		tag_lbl.text = str(cfg.get("tag", ""))
-		tag_lbl.add_theme_font_size_override("font_size", 12)
-		tag_lbl.add_theme_color_override("font_color", Color(0.424, 0.510, 0.486))
-		cvb.add_child(tag_lbl)
-
-		# 난이도 명칭 (NOVICE, DEVELOPER, ARCHITECT)
-		var title_lbl := Label.new()
-		title_lbl.text = str(cfg["title"])
-		title_lbl.add_theme_font_size_override("font_size", 22)
-		title_lbl.add_theme_color_override("font_color", cfg["color"])
-		cvb.add_child(title_lbl)
-
-		# 3D 뷰포트 프리뷰 (novice_island, developer_island, architect_island)
-		var preview_card := _create_interactive_3d_card(
-			str(cfg["model_scene"]),
-			cfg["model_center"],
-			Vector2i(270, 185),
-			cfg["card_bg"],
-			cfg["border_color"],
-			float(cfg.get("cam_dist", 5.8)),
-			float(cfg.get("cam_pitch", 22.0)),
-			float(cfg.get("cam_yaw", -32.0)),
-			"3D 보기",
-			float(cfg.get("target_y", 0.85))
-		)
-		preview_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		cvb.add_child(preview_card)
-
-		# 설명 문구
-		var desc_lbl := Label.new()
-		desc_lbl.text = str(cfg["desc"])
-		desc_lbl.add_theme_font_size_override("font_size", 13)
-		desc_lbl.add_theme_color_override("font_color", Color(0.345, 0.384, 0.392)) # #586264
-		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		cvb.add_child(desc_lbl)
-
-		# 점수 보상 안내
-		var pts_lbl := Label.new()
-		pts_lbl.text = "문제당 +%d점" % int(cfg["pts"])
-		pts_lbl.add_theme_font_size_override("font_size", 13.5)
-		pts_lbl.add_theme_color_override("font_color", cfg["color"])
-		cvb.add_child(pts_lbl)
-
-		# 시작 버튼
-		var start_btn := Button.new()
-		start_btn.text = "이 난이도로 시작  →"
-		start_btn.custom_minimum_size = Vector2(0, 40)
-		start_btn.add_theme_font_size_override("font_size", 14)
-		_apply_btn_styles(start_btn,
-			Color(0.102, 0.455, 0.510),
-			Color(0.125, 0.545, 0.612),
-			Color.WHITE, Color.TRANSPARENT, 10
-		)
-		var k := diff_key
-		start_btn.pressed.connect(func(): _on_select_difficulty(k))
-		cvb.add_child(start_btn)
-
-	# 5. 푸터 문구
-	var footer_lbl := Label.new()
-	footer_lbl.text = "작은 도전부터 시작해도 좋아요. 탐험은 나만의 속도로!"
-	footer_lbl.add_theme_font_size_override("font_size", 12.5)
-	footer_lbl.add_theme_color_override("font_color", Color(0.478, 0.522, 0.502)) # #7a8580
-	vb.add_child(footer_lbl)
-
-func _on_select_difficulty(diff_key: String) -> void:
+func _on_select_difficulty(diff_key: String = "NOVICE") -> void:
 	current_difficulty = diff_key
 	user_save_data["difficulty"] = current_difficulty
 	_save_current_state()
 	_set_game_state(GameState.PLAYING)
-	_show_msg("⚔️ [%s] 난이도로 게임을 시작합니다!" % current_difficulty, 3.0)
+	_show_msg("✨ NODEVERSE 탐험을 시작합니다!", 3.0)
 
-func _on_start_new_game(diff_key: String) -> void:
+func _on_start_new_game(diff_key: String = "NOVICE") -> void:
 	current_difficulty = diff_key
 	user_save_data = AuthManager.reset_user_progress(current_user, current_difficulty)
 	quiz_score = 0
@@ -3368,10 +3272,9 @@ func _on_start_new_game(diff_key: String) -> void:
 	_zone_name = "MAIN"
 	_save_current_state()
 	_set_game_state(GameState.PLAYING)
-	_show_msg("✨ [%s] 처음부터 새로운 여정을 시작합니다!" % current_difficulty, 3.0)
+	_show_msg("✨ 처음부터 새로운 여정을 시작합니다!", 3.0)
 
 func _on_continue_game() -> void:
-	current_difficulty = str(user_save_data.get("difficulty", "NOVICE"))
 	quiz_score = int(user_save_data.get("score", 0))
 	var mg_cleared = user_save_data.get("minigame_cleared", {})
 	MiniGameBase.set_account_progress(mg_cleared if mg_cleared is Dictionary else {})
@@ -3380,7 +3283,7 @@ func _on_continue_game() -> void:
 		var saved_position := Vector3(float(ppos[0]), float(ppos[1]), float(ppos[2]))
 		player.teleport_to(saved_position if _safe_saved_player_position(saved_position) else player.spawn_point)
 	_set_game_state(GameState.PLAYING)
-	_show_msg("🚀 이전 저장 상태에서 여정을 이어갑니다! (난이도: %s, 점수: %d점)" % [current_difficulty, quiz_score], 3.0)
+	_show_msg("🚀 이전 저장 상태에서 여정을 이어갑니다! (점수: %d점)" % quiz_score, 3.0)
 
 func _build_pause_modal(canvas: CanvasLayer) -> void:
 	pause_modal = Control.new()
@@ -3417,7 +3320,7 @@ func _build_pause_modal(canvas: CanvasLayer) -> void:
 	pause_info_lbl = Label.new()
 	pause_info_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_info_lbl.add_theme_font_size_override("font_size", 15)
-	pause_info_lbl.text = "플레이어: Guest | 난이도: NOVICE | 점수: 0점"
+	pause_info_lbl.text = "플레이어: Guest | 점수: 0점"
 	pause_info_lbl.modulate = Color(1.0, 0.90, 0.40)
 	vb.add_child(pause_info_lbl)
 
@@ -3432,7 +3335,7 @@ func _build_pause_modal(canvas: CanvasLayer) -> void:
 	btn_v.add_child(resume_btn)
 
 	var chg_diff_btn := Button.new()
-	chg_diff_btn.text = "🔄 난이도 변경 / 로비로 가기"
+	chg_diff_btn.text = "🔄 처음부터 다시 시작 / 로비"
 	chg_diff_btn.custom_minimum_size = Vector2(0, 44)
 	chg_diff_btn.pressed.connect(func(): _set_game_state(GameState.DIFFICULTY_SELECT))
 	btn_v.add_child(chg_diff_btn)
@@ -3675,19 +3578,9 @@ func _open_quiz_for_zone(zone_key: String) -> void:
 		_show_msg("이 구역의 퀴즈 데이터가 없습니다.", 2.0)
 		return
 
-	# 현재 선택된 난이도로 퀴즈 필터링
-	var target_diff: String = current_difficulty.to_lower()
-	var filtered: Array = []
-	for q in all_list:
-		if str(q.get("difficulty", "")).to_lower() == target_diff:
-			filtered.append(q)
-	if filtered.is_empty():
-		filtered = all_list # 대체 폴백
-
-	var state_key: String = q_key + "_" + target_diff
-	var idx: int = quiz_index.get(state_key, 0) % filtered.size()
-	current_quiz_item = filtered[idx]
-	_display_current_quiz(q_key, idx + 1, filtered.size())
+	var idx: int = int(quiz_index.get(q_key, 0)) % all_list.size()
+	current_quiz_item = all_list[idx]
+	_display_current_quiz(q_key, idx + 1, all_list.size())
 
 	is_quiz_open = true
 	quiz_modal.visible = true
@@ -3703,8 +3596,7 @@ func _close_quiz() -> void:
 func _on_quiz_option_selected(opt_idx: int) -> void:
 	var correct: int = int(current_quiz_item.get("correctIndex", 0))
 	var exp: String = str(current_quiz_item.get("explanation", ""))
-	var cfg: Dictionary = DIFFICULTY_CONFIG.get(current_difficulty, DIFFICULTY_CONFIG["NOVICE"])
-	var pts: int = int(cfg.get("pts", 10))
+	var pts: int = 10
 
 	for btn: Button in quiz_option_btns:
 		btn.disabled = true
