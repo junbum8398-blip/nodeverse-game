@@ -45,6 +45,12 @@ func toggle_launcher() -> void:
 	if result_banner != null:
 		result_banner.visible = false
 	if launcher_panel != null:
+		launcher_panel.visible = false
+	# Immediately start moving and playing on the current screen!
+	_on_start_current_scene_bot()
+
+func toggle_course_menu() -> void:
+	if launcher_panel != null:
 		launcher_panel.visible = not launcher_panel.visible
 
 func open_launcher() -> void:
@@ -236,6 +242,13 @@ func _build_ui() -> void:
 	step_action_lbl.add_theme_font_size_override("font_size", 13)
 	step_action_lbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.70))
 	r_vb.add_child(step_action_lbl)
+
+	var menu_btn := Button.new()
+	menu_btn.text = "📋 코스 선택"
+	menu_btn.custom_minimum_size = Vector2(104, 36)
+	_style_btn(menu_btn, Color(0.16, 0.24, 0.34), Color(0.24, 0.36, 0.50), Color(0.88, 0.96, 1.0), 13)
+	menu_btn.pressed.connect(toggle_course_menu)
+	r_hb.add_child(menu_btn)
 
 	speed_btn = Button.new()
 	speed_btn.text = "⚡ 속도 1x"
@@ -450,24 +463,28 @@ func _run_full_scenario_tour(token: int) -> void:
 		return
 
 	# ------------------------------------------------------------------------
-	# STEP 1: 3D World Island Movement & NPC Dialogue
+	# STEP 1: Walk from current 3D position to the nearest NPC & Talk
 	# ------------------------------------------------------------------------
-	_set_live_status("[Step 1/5] 3D 자료구조 섬 이동 및 NPC 대화 검증", "자료구조 섬으로 이동해 배열 관리자 NPC에게 걸어갑니다...")
-	world.player.teleport_to(Vector3(-15.5, world.TOP + 0.1, 0.2))
-	world._show_msg("🤖 [테스트 봇] 자료구조 섬(Data Structures) 탐험 시작!", 3.0)
-	if not await _wait_sec(0.7, token):
-		return
-
+	_set_live_status("[Step 1/5] 현재 위치에서 가까운 NPC에게 이동 중", "봇이 로봇 캐릭터를 직접 걸어서 NPC 앞으로 이동합니다...")
 	var target_npc: Node3D = null
+	var best_npc_d := INF
 	for npc in world.spawned_npcs:
-		if is_instance_valid(npc) and String(npc.get_meta("npc_id", "")).begins_with("NPC01"):
-			target_npc = npc
-			break
+		if is_instance_valid(npc):
+			var d := world.player.global_position.distance_to(npc.global_position)
+			if d < best_npc_d:
+				best_npc_d = d
+				target_npc = npc
 	if target_npc != null:
-		await _walk_3d_player_to(world, target_npc.global_position + Vector3(1.4, 0, 0.5), 1.9, token)
+		if best_npc_d > 22.0:
+			# If player is very far, move onto the same island nearby first, then walk the last 8m visibly
+			var approach_start := target_npc.global_position + Vector3(4.5, 0.1, 4.5)
+			world.player.teleport_to(Vector3(approach_start.x, world.TOP + 0.1, approach_start.z))
+		var npc_name_str := String(target_npc.get_meta("npc_name", "NPC"))
+		_set_live_status("[Step 1/5] 3D 로봇 이동 -> " + npc_name_str, "WASD 이동 입력으로 [%s] 앞으로 걸어갑니다..." % npc_name_str)
+		await _walk_3d_player_to(world, target_npc.global_position + Vector3(1.2, 0, 1.0), 1.8, token)
 		if stop_requested or token != _run_token:
 			return
-		_set_live_status("[Step 1/5] 3D 월드 NPC 상호작용 검증", "배열 관리자 NPC 앞에서 [E] 키를 눌러 대화를 진행합니다...")
+		_set_live_status("[Step 1/5] 3D 월드 NPC 상호작용 검증", "[%s] 앞에서 [E] 키를 눌러 대화를 진행합니다..." % npc_name_str)
 		world.active_npc = target_npc
 		world._talk_to_npc(target_npc)
 		if not await _wait_sec(1.1, token):
@@ -480,18 +497,16 @@ func _run_full_scenario_tour(token: int) -> void:
 				return
 
 	# ------------------------------------------------------------------------
-	# STEP 2: 3D Island Interactive Props (Stack Push & Array Swap) + Quiz
+	# STEP 2: 3D Island Interactive Props & Current Zone Quiz
 	# ------------------------------------------------------------------------
-	_set_live_status("[Step 2/5] 3D 자료구조 기믹(배열 Swap · 스택 Push) & 퀴즈 검증", "3D 배열 크레인과 스택 타워를 조작하고 섬 퀴즈를 풀이합니다...")
-	world._array_swap()
-	if not await _wait_sec(0.7, token):
-		return
-	world._stack_push()
-	if not await _wait_sec(0.7, token):
+	var cur_zone: String = world._zone_name if "_zone_name" in world and not String(world._zone_name).is_empty() else "DS"
+	_set_live_status("[Step 2/5] 현재 섬(%s) 3D 학습 기믹 & 퀴즈 자동 풀이" % cur_zone, "현재 섬의 3D 학습 기믹을 작동하고 퀴즈를 풉니다...")
+	world._on_interact()
+	if not await _wait_sec(0.8, token):
 		return
 
-	world._open_quiz_for_zone("DS")
-	_set_live_status("[Step 2/5] 3D 섬 학습 퀴즈 자동 풀이", "출제된 자료구조 퀴즈의 정답을 판별하여 선택합니다...")
+	world._open_quiz_for_zone(cur_zone)
+	_set_live_status("[Step 2/5] 3D 섬 학습 퀴즈 자동 풀이", "출제된 [%s] 구역 퀴즈의 정답을 판별하여 선택합니다..." % cur_zone)
 	if not await _wait_sec(1.2, token):
 		return
 	if world.is_quiz_open and not world.current_quiz_item.is_empty():
@@ -504,20 +519,18 @@ func _run_full_scenario_tour(token: int) -> void:
 			return
 
 	# ------------------------------------------------------------------------
-	# STEP 3: Walk 3D Robot to Computer Terminal & Enter 2D Computer Menu
+	# STEP 3: Walk 3D Robot to Nearest Computer Terminal & Enter 2D Menu
 	# ------------------------------------------------------------------------
-	_set_live_status("[Step 3/5] 3D 컴퓨터 터미널 이동 및 접속", "자료구조 섬 컴퓨터 앞으로 걸어가 [E] 키로 접속합니다...")
-	var ds_term: Node3D = null
-	for term in world.computer_terminals:
-		if is_instance_valid(term) and String(term.get_meta("quiz_zone", "")) == "DS":
-			ds_term = term
-			break
-	if ds_term == null and not world.computer_terminals.is_empty():
-		ds_term = world.computer_terminals[0]
+	var nearest_term: Node3D = world._nearest_terminal()
+	var term_zone: String = String(nearest_term.get_meta("quiz_zone", "DS")) if is_instance_valid(nearest_term) else "DS"
+	_set_live_status("[Step 3/5] 3D 컴퓨터 터미널(%s)로 걸어서 이동 중" % term_zone, "섬의 컴퓨터 책상 앞으로 로봇이 직접 걸어갑니다...")
 
-	if ds_term != null:
-		var front_pos: Vector3 = ds_term.global_position + ds_term.global_basis.z * 1.5
-		await _walk_3d_player_to(world, front_pos, 1.8, token)
+	if is_instance_valid(nearest_term):
+		var front_pos: Vector3 = nearest_term.global_position + nearest_term.global_basis.z * 1.5
+		if world.player.global_position.distance_to(front_pos) > 22.0:
+			var near_start := front_pos + Vector3(5.0, 0.1, 4.0)
+			world.player.teleport_to(Vector3(near_start.x, world.TOP + 0.1, near_start.z))
+		await _walk_3d_player_to(world, front_pos, 1.7, token)
 		if stop_requested or token != _run_token:
 			return
 		_set_live_status("[Step 3/5] 컴퓨터 모니터 줌인 및 2D 메뉴 진입", "💻 [E] 컴퓨터 접속 실행 중...")
@@ -531,16 +544,17 @@ func _run_full_scenario_tour(token: int) -> void:
 		return
 
 	# ------------------------------------------------------------------------
-	# STEP 4: Play Representative 2D Minigames Live on Screen
-	#   (1) ST01_Array (Walking Robot Box Manipulation)
-	#   (2) SQL01_Query (5x5 SQL Drawer Painting)
-	#   (3) ALG01_Sorting (Algorithm Bubble Sort Step-by-Step)
+	# STEP 4: Play Current Island's 2D Minigame + Representative Stages Live
 	# ------------------------------------------------------------------------
+	var cat_games: Array = Catalog.games_for(Catalog.selected_category)
+	var first_game: Array = cat_games[0] if not cat_games.is_empty() else ["ST01", "순서가 있는 보관소", "배열", "DS", "ST01_Array"]
 	var demo_stages := [
-		["ST01", "ST01_Array", "DS-01 순서가 있는 보관소 (배열)"],
-		["SQL01", "SQL01_Query", "SQ-01 필요한 칸만 꺼내기 (SQL SELECT·WHERE)"],
-		["ALG01", "ALG01_Sorting", "AL-02 순서 맞춤 작업대 (버블 정렬)"]
+		[str(first_game[0]), str(first_game[4]), "%s (%s)" % [str(first_game[1]), str(first_game[2])]]
 	]
+	if str(first_game[0]) != "ST01":
+		demo_stages.append(["ST01", "ST01_Array", "DS-01 순서가 있는 보관소 (배열)"])
+	if str(first_game[0]) != "SQL01":
+		demo_stages.append(["SQL01", "SQL01_Query", "SQ-01 필요한 칸만 꺼내기 (SQL SELECT·WHERE)"])
 
 	for item in demo_stages:
 		if stop_requested or token != _run_token:
@@ -657,8 +671,12 @@ func _walk_2d_player_to(player_2d: CharacterBody2D, target_pos: Vector2, token: 
 	if player_2d == null or not is_instance_valid(player_2d):
 		return
 	player_2d.active = true
+	var orig_speed: float = float(player_2d.speed)
+	player_2d.speed = 240.0 * maxf(1.0, speed_mult)
 	var guard := 0
-	while guard < 110:
+	var prev_pos := player_2d.position
+	var stuck_frames := 0
+	while guard < 180:
 		if stop_requested or token != _run_token or not is_instance_valid(player_2d):
 			break
 		guard += 1
@@ -666,10 +684,16 @@ func _walk_2d_player_to(player_2d: CharacterBody2D, target_pos: Vector2, token: 
 		if diff.length() <= 14.0:
 			break
 		player_2d.bot_move_dir = diff.normalized()
-		if diff.length() > 38.0:
-			player_2d.position = player_2d.position.move_toward(target_pos, 5.5 * maxf(1.0, speed_mult))
 		await get_tree().physics_frame
+		if player_2d.position.distance_to(prev_pos) < 0.4:
+			stuck_frames += 1
+			if stuck_frames > 12:
+				player_2d.position = player_2d.position.move_toward(target_pos, 8.0 * maxf(1.0, speed_mult))
+		else:
+			stuck_frames = 0
+		prev_pos = player_2d.position
 	if is_instance_valid(player_2d):
+		player_2d.speed = orig_speed
 		player_2d.bot_move_dir = Vector2.ZERO
 		player_2d.velocity = Vector2.ZERO
 		player_2d.position = target_pos
