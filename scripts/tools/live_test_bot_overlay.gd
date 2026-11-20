@@ -124,15 +124,15 @@ func _style_btn(btn: Button, bg: Color, hover_bg: Color, fg: Color = Color.WHITE
 	btn.focus_mode = Control.FOCUS_NONE
 
 func _build_ui() -> void:
-	# 1. Launcher Control Panel (Top-Right dropdown modal)
+	# 1. Launcher Control Panel (Top-Right dropdown modal, cleanly below running bar)
 	launcher_panel = PanelContainer.new()
 	launcher_panel.name = "BotLauncherPanel"
 	launcher_panel.visible = false
 	launcher_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	launcher_panel.offset_left = -520.0
-	launcher_panel.offset_top = 62.0
+	launcher_panel.offset_top = 88.0
 	launcher_panel.offset_right = -24.0
-	launcher_panel.offset_bottom = 430.0
+	launcher_panel.offset_bottom = 456.0
 	launcher_panel.add_theme_stylebox_override(
 		"panel",
 		_make_box_style(Color(0.06, 0.10, 0.15, 0.96), Color(0.18, 0.72, 0.58, 0.9), 14, 18, 16, 2)
@@ -175,7 +175,7 @@ func _build_ui() -> void:
 	vb.add_child(desc)
 
 	var btn_full := Button.new()
-	btn_full.text = "▶ 시나리오 전체 자동 플레이 시작 (3D 월드 → 컴퓨터 → 미니게임 → 결과서)"
+	btn_full.text = "▶ 전체 코스 자동 플레이 (3D 월드 이동 → NPC 대화 → 컴퓨터 접속 → 2D 미니게임)"
 	btn_full.custom_minimum_size = Vector2(0, 42)
 	_style_btn(btn_full, Color(0.09, 0.52, 0.42), Color(0.12, 0.64, 0.52), Color.WHITE, 14)
 	btn_full.pressed.connect(_on_start_full_tour)
@@ -189,7 +189,7 @@ func _build_ui() -> void:
 	vb.add_child(btn_cur)
 
 	var sub_lbl := Label.new()
-	sub_lbl.text = "🎮 분야별 대표 미니게임 봇 자동 플레이 바로 보기:"
+	sub_lbl.text = "🎮 섬 컴퓨터로 걸어가서 접속 후 미니게임 봇 플레이 보기:"
 	sub_lbl.add_theme_font_size_override("font_size", 13)
 	sub_lbl.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
 	vb.add_child(sub_lbl)
@@ -404,19 +404,68 @@ func _on_stage_demo_selected(stage_id: String) -> void:
 		stop_bot("스테이지를 찾을 수 없습니다: " + stage_id)
 		return
 
-	# If currently in 3D world, walk to or enter 2D mode cleanly so return_from_2d works
+	# 1. If currently in 2D menu or 2D stage, return to 3D world first so we can show the 3D robot walking to the computer!
 	var sc := get_tree().current_scene
-	if sc != null and sc.get_script() and sc.get_script().resource_path == "res://scripts/nodeverse_world.gd":
-		_ensure_world_playing(sc)
-		Catalog.selected_category = target_cat
-		_set_live_status("미니게임 시연 이동: " + target_title, "3D 월드에서 컴퓨터 화면으로 전환합니다...")
-		if not await _wait_sec(0.6, token):
+	var cur_spath: String = str(sc.get_script().resource_path) if (sc != null and sc.get_script() != null) else ""
+	if cur_spath != "res://scripts/nodeverse_world.gd":
+		_set_live_status("3D 월드로 이동 중: " + target_title, "해당 섬의 3D 컴퓨터 앞으로 걸어가기 위해 3D 월드로 이동합니다...")
+		await _return_to_3d_world()
+		if not await _wait_sec(0.5, token):
 			return
-		sc._switch_to_2d()
-		await get_tree().process_frame
-		await get_tree().process_frame
+		sc = get_tree().current_scene
+		cur_spath = str(sc.get_script().resource_path) if (sc != null and sc.get_script() != null) else ""
 
-	_set_live_status("미니게임 봇 플레이: " + target_title, "스테이지 로딩 및 자동 풀이 시작...")
+	# 2. In 3D world: find the computer terminal for target_cat (DS / ALGO / SQL / DATA), walk up to it, and zoom into the monitor!
+	if sc != null and cur_spath == "res://scripts/nodeverse_world.gd":
+		var world: Node = sc
+		_ensure_world_playing(world)
+		Catalog.selected_category = target_cat
+
+		var target_term: Node3D = null
+		for term in world.computer_terminals:
+			if is_instance_valid(term) and String(term.get_meta("quiz_zone", "")) == target_cat:
+				target_term = term
+				break
+		if target_term == null and not world.computer_terminals.is_empty():
+			target_term = world.computer_terminals[0]
+
+		if is_instance_valid(target_term):
+			var front_pos: Vector3 = target_term.global_position + target_term.global_basis.z * 1.5
+			var walk_start: Vector3 = front_pos + target_term.global_basis.z * 4.2 + target_term.global_basis.x * 1.8
+			# If robot is on another island (far away), place it on the island path ~4.5m away so it walks visibly to the computer
+			if world.player.global_position.distance_to(front_pos) > 14.0:
+				world.player.teleport_to(Vector3(walk_start.x, float(world.TOP) + 0.1, walk_start.z))
+				if not await _wait_sec(0.35, token):
+					return
+
+			var cat_kor: String = str(Catalog.CATEGORIES.get(target_cat, target_cat))
+			_set_live_status("[%s 섬] 컴퓨터 터미널로 걸어가는 중" % cat_kor, "로봇이 [%s] 실습을 위해 섬 컴퓨터 앞으로 직접 걸어갑니다..." % target_title)
+			await _walk_3d_player_to(world, front_pos, 1.65, token)
+			if stop_requested or token != _run_token:
+				return
+
+			_set_live_status("[%s 섬] 컴퓨터 접속 및 모니터 줌인" % cat_kor, "💻 [E] 컴퓨터 접속 -> [%s] 메뉴 열기" % target_title)
+			if not await _wait_sec(0.45, token):
+				return
+			await world._open_computer_game()
+			await get_tree().process_frame
+			await get_tree().process_frame
+
+	# 3. On 2D Computer Menu (Main.tscn): show the menu card briefly, then enter the stage
+	var menu_sc := get_tree().current_scene
+	if menu_sc != null and menu_sc.get_script() != null and str(menu_sc.get_script().resource_path) == "res://scripts/main_menu.gd":
+		var cat_games: Array = Catalog.games_for(target_cat)
+		for idx in cat_games.size():
+			if str(cat_games[idx][0]) == stage_id:
+				menu_sc.page = int(idx / 6)
+				menu_sc.queue_redraw()
+				break
+		_set_live_status("컴퓨터 메뉴에서 [%s] 카드 선택 중" % target_title, "미니게임 카드를 클릭하여 실습 스테이지로 입장합니다...")
+		if not await _wait_sec(0.95, token):
+			return
+
+	# 4. Enter and play the 2D Minigame stage
+	_set_live_status("2D 미니게임 봇 자동 플레이: " + target_title, "스테이지 입장 완료 · 로봇 이동 및 자동 풀이 시작!")
 	get_tree().change_scene_to_file("res://scenes/stages/%s.tscn" % target_scene)
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -427,7 +476,8 @@ func _on_stage_demo_selected(stage_id: String) -> void:
 	if stop_requested or token != _run_token:
 		return
 
-	_set_live_status("미니게임 시연 완료: " + target_title, "3D 월드로 복귀합니다...")
+	# 5. Return to 3D World cleanly
+	_set_live_status("미니게임 클리어 완료: " + target_title, "컴퓨터에서 로그아웃하고 3D 월드로 복귀합니다...")
 	if not await _wait_sec(0.8, token):
 		return
 	await _return_to_3d_world()
@@ -575,22 +625,16 @@ func _run_full_scenario_tour(token: int) -> void:
 			return
 
 	# ------------------------------------------------------------------------
-	# STEP 5: Return to 3D World & Generate Full PDF Test Report
+	# STEP 5: Return to 3D World
 	# ------------------------------------------------------------------------
-	_set_live_status("[Step 5/5] 3D 월드 복귀 및 테스트 결과서(PDF) 생성", "3D 월드로 복귀하고 시나리오 테스트 결과서를 생성합니다...")
+	_set_live_status("[Step 5/5] 미니게임 자동 풀이 완료 및 3D 월드 복귀", "실습을 마치고 3D 월드 섬으로 복귀합니다...")
 	await _return_to_3d_world()
 	if not await _wait_sec(0.8, token):
 		return
 
-	# Trigger background full 16-step report generation so Desktop PDF is freshly updated
-	var proj_dir := ProjectSettings.globalize_path("res://")
-	var py_script := proj_dir.path_join("tools/run_scenario_verification.py")
-	var out_arr: Array = []
-	OS.execute("python", [py_script, "--scenario", "scenarios/default_full_scenario.json"], out_arr, false)
-
 	is_running = false
 	running_bar.visible = false
-	_show_completion_banner("✅ 시나리오 테스트 봇 플레이 완료! (바탕화면에 NODEVERSE_자동화봇_테스트결과서.pdf 생성됨)")
+	_show_completion_banner("✅ 시나리오 테스트 봇 자동 플레이 시연이 완료되었습니다!")
 
 func _return_to_3d_world() -> void:
 	var world_script = load("res://scripts/nodeverse_world.gd")
