@@ -8,6 +8,34 @@ extends CanvasLayer
 const Catalog = preload("res://scripts/learning_catalog.gd")
 const SqlModel = preload("res://scripts/minigames/sql_query_model.gd")
 
+const ISLAND_ORDER: Array[String] = ["MAIN", "INTRO", "DS", "ALGO", "SQL", "DATA", "CHALLENGE"]
+const ISLAND_NAMES: Dictionary = {
+	"MAIN": "메인 섬 (Main Hub)",
+	"INTRO": "입문 섬 (Intro Basics)",
+	"DS": "자료구조 섬 (Data Structures)",
+	"ALGO": "알고리즘 섬 (Algorithms)",
+	"SQL": "SQL 섬 (Database & Query)",
+	"DATA": "데이터 탐험 섬 (Data Exploration)",
+	"CHALLENGE": "종합 도전 섬 (Grand Challenge)"
+}
+# Verified safe walkable start points on each island (authored map coordinates)
+const ISLAND_WALK_STARTS: Dictionary = {
+	"MAIN": Vector3(0.0, 1.1, 9.5),
+	"INTRO": Vector3(18.8, 1.1, 8.8),
+	"DS": Vector3(-19.5, 1.1, 6.2),
+	"ALGO": Vector3(0.0, 1.1, -13.8),
+	"SQL": Vector3(-19.2, 1.1, -14.2),
+	"DATA": Vector3(23.5, 1.15, -17.8),
+	"CHALLENGE": Vector3(0.0, 1.1, -31.2)
+}
+# Representative minigame per computer terminal island
+const ISLAND_DEFAULT_STAGE: Dictionary = {
+	"DS": "ST01",
+	"ALGO": "ALG01",
+	"SQL": "SQL01",
+	"DATA": "DATA01"
+}
+
 var is_running: bool = false
 var stop_requested: bool = false
 var speed_mult: float = 1.0
@@ -389,6 +417,75 @@ func _on_start_current_scene_bot() -> void:
 		running_bar.visible = false
 		_show_completion_banner("✅ 현재 화면 테스트 봇 자동 플레이가 완료되었습니다!")
 
+func _find_terminal_for_category(world: Node, cat: String) -> Node3D:
+	for term in world.computer_terminals:
+		if is_instance_valid(term) and String(term.get_meta("quiz_zone", "DS")) == cat:
+			return term
+	if not world.computer_terminals.is_empty():
+		return world.computer_terminals[0]
+	return null
+
+func _find_npc_for_island(world: Node, zone_key: String) -> Node3D:
+	var best: Node3D = null
+	var best_d: float = INF
+	for npc in world.spawned_npcs:
+		if is_instance_valid(npc) and String(world._zone_of(npc.global_position)) == zone_key:
+			var d: float = world.player.global_position.distance_to(npc.global_position)
+			if d < best_d:
+				best_d = d
+				best = npc
+	return best
+
+func _walk_to_terminal_and_enter_stage(world: Node, target_cat: String, stage_id: String, target_scene: String, target_title: String, token: int) -> bool:
+	_ensure_world_playing(world)
+	Catalog.selected_category = target_cat
+	var cat_kor: String = str(Catalog.CATEGORIES.get(target_cat, target_cat))
+	var target_term: Node3D = _find_terminal_for_category(world, target_cat)
+
+	if is_instance_valid(target_term):
+		var front_pos: Vector3 = target_term.global_position + target_term.global_basis.z * 1.5
+		# Ensure robot starts on the same island ~4.5m away from the computer so the user clearly sees it walk to the computer
+		var dist_to_term: float = world.player.global_position.distance_to(front_pos)
+		if dist_to_term > 12.0 or dist_to_term < 2.2:
+			var start_p: Vector3 = ISLAND_WALK_STARTS.get(target_cat, front_pos + Vector3(0.0, 0.1, 4.0))
+			if start_p.distance_to(front_pos) < 2.8:
+				start_p = front_pos + target_term.global_basis.z * 3.8
+			world.player.teleport_to(start_p)
+			world.player.cam_focus = start_p
+			if not await _wait_sec(0.45, token):
+				return false
+
+		_set_live_status("[%s 섬] 컴퓨터 책상으로 걸어가는 중" % cat_kor, "3D 로봇이 [%s] 실행을 위해 컴퓨터 앞으로 직접 걸어갑니다..." % target_title)
+		await _walk_3d_player_to(world, front_pos, 1.55, token)
+		if stop_requested or token != _run_token:
+			return false
+
+		_set_live_status("[%s 섬] 컴퓨터 도착 · 모니터 접속(E)" % cat_kor, "💻 [E] 컴퓨터 접속 -> [%s] 화면으로 줌인합니다..." % target_title)
+		if not await _wait_sec(0.55, token):
+			return false
+		await world._open_computer_game()
+		await get_tree().process_frame
+		await get_tree().process_frame
+
+	# Show the 2D Computer Menu card selection before entering the stage
+	var menu_sc := get_tree().current_scene
+	if menu_sc != null and menu_sc.get_script() != null and str(menu_sc.get_script().resource_path) == "res://scripts/main_menu.gd":
+		var cat_games: Array = Catalog.games_for(target_cat)
+		for idx in cat_games.size():
+			if str(cat_games[idx][0]) == stage_id:
+				menu_sc.page = int(idx / 6)
+				menu_sc.queue_redraw()
+				break
+		_set_live_status("[%s 섬 컴퓨터 메뉴] %s 선택" % [cat_kor, target_title], "컴퓨터 메뉴에서 카드를 선택해 미니게임에 입장합니다...")
+		if not await _wait_sec(1.0, token):
+			return false
+
+	_set_live_status("2D 미니게임 봇 자동 플레이: " + target_title, "스테이지 입장 완료 · 로봇 이동 및 자동 풀이 시작!")
+	get_tree().change_scene_to_file("res://scenes/stages/%s.tscn" % target_scene)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	return await _wait_sec(0.4, token)
+
 func _on_stage_demo_selected(stage_id: String) -> void:
 	var token := _begin_bot_session()
 	var target_scene := ""
@@ -404,79 +501,26 @@ func _on_stage_demo_selected(stage_id: String) -> void:
 		stop_bot("스테이지를 찾을 수 없습니다: " + stage_id)
 		return
 
-	# 1. If currently in 2D menu or 2D stage, return to 3D world first so we can show the 3D robot walking to the computer!
+	# 1. Always return to 3D world and wait for monitor zoom-out to finish so the user sees the 3D robot walk to the computer!
 	var sc := get_tree().current_scene
 	var cur_spath: String = str(sc.get_script().resource_path) if (sc != null and sc.get_script() != null) else ""
 	if cur_spath != "res://scripts/nodeverse_world.gd":
-		_set_live_status("3D 월드로 이동 중: " + target_title, "해당 섬의 3D 컴퓨터 앞으로 걸어가기 위해 3D 월드로 이동합니다...")
+		_set_live_status("3D 섬으로 이동 중: " + target_title, "3D 월드에서 로봇이 컴퓨터로 걸어가는 장면을 보여주기 위해 복귀합니다...")
 		await _return_to_3d_world()
-		if not await _wait_sec(0.5, token):
+		if not await _wait_sec(0.4, token):
 			return
 		sc = get_tree().current_scene
 		cur_spath = str(sc.get_script().resource_path) if (sc != null and sc.get_script() != null) else ""
 
-	# 2. In 3D world: find the computer terminal for target_cat (DS / ALGO / SQL / DATA), walk up to it, and zoom into the monitor!
 	if sc != null and cur_spath == "res://scripts/nodeverse_world.gd":
-		var world: Node = sc
-		_ensure_world_playing(world)
-		Catalog.selected_category = target_cat
-
-		var target_term: Node3D = null
-		for term in world.computer_terminals:
-			if is_instance_valid(term) and String(term.get_meta("quiz_zone", "")) == target_cat:
-				target_term = term
-				break
-		if target_term == null and not world.computer_terminals.is_empty():
-			target_term = world.computer_terminals[0]
-
-		if is_instance_valid(target_term):
-			var front_pos: Vector3 = target_term.global_position + target_term.global_basis.z * 1.5
-			var walk_start: Vector3 = front_pos + target_term.global_basis.z * 4.2 + target_term.global_basis.x * 1.8
-			# If robot is on another island (far away), place it on the island path ~4.5m away so it walks visibly to the computer
-			if world.player.global_position.distance_to(front_pos) > 14.0:
-				world.player.teleport_to(Vector3(walk_start.x, float(world.TOP) + 0.1, walk_start.z))
-				if not await _wait_sec(0.35, token):
-					return
-
-			var cat_kor: String = str(Catalog.CATEGORIES.get(target_cat, target_cat))
-			_set_live_status("[%s 섬] 컴퓨터 터미널로 걸어가는 중" % cat_kor, "로봇이 [%s] 실습을 위해 섬 컴퓨터 앞으로 직접 걸어갑니다..." % target_title)
-			await _walk_3d_player_to(world, front_pos, 1.65, token)
-			if stop_requested or token != _run_token:
-				return
-
-			_set_live_status("[%s 섬] 컴퓨터 접속 및 모니터 줌인" % cat_kor, "💻 [E] 컴퓨터 접속 -> [%s] 메뉴 열기" % target_title)
-			if not await _wait_sec(0.45, token):
-				return
-			await world._open_computer_game()
-			await get_tree().process_frame
-			await get_tree().process_frame
-
-	# 3. On 2D Computer Menu (Main.tscn): show the menu card briefly, then enter the stage
-	var menu_sc := get_tree().current_scene
-	if menu_sc != null and menu_sc.get_script() != null and str(menu_sc.get_script().resource_path) == "res://scripts/main_menu.gd":
-		var cat_games: Array = Catalog.games_for(target_cat)
-		for idx in cat_games.size():
-			if str(cat_games[idx][0]) == stage_id:
-				menu_sc.page = int(idx / 6)
-				menu_sc.queue_redraw()
-				break
-		_set_live_status("컴퓨터 메뉴에서 [%s] 카드 선택 중" % target_title, "미니게임 카드를 클릭하여 실습 스테이지로 입장합니다...")
-		if not await _wait_sec(0.95, token):
+		var entered := await _walk_to_terminal_and_enter_stage(sc, target_cat, stage_id, target_scene, target_title, token)
+		if not entered or stop_requested or token != _run_token:
 			return
-
-	# 4. Enter and play the 2D Minigame stage
-	_set_live_status("2D 미니게임 봇 자동 플레이: " + target_title, "스테이지 입장 완료 · 로봇 이동 및 자동 풀이 시작!")
-	get_tree().change_scene_to_file("res://scenes/stages/%s.tscn" % target_scene)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if not await _wait_sec(0.4, token):
-		return
 
 	await _play_current_2d_stage(token, 2)
 	if stop_requested or token != _run_token:
 		return
 
-	# 5. Return to 3D World cleanly
 	_set_live_status("미니게임 클리어 완료: " + target_title, "컴퓨터에서 로그아웃하고 3D 월드로 복귀합니다...")
 	if not await _wait_sec(0.8, token):
 		return
@@ -497,150 +541,130 @@ func _ensure_world_playing(world: Node) -> void:
 func _run_full_scenario_tour(token: int) -> void:
 	# Ensure we start in 3D World
 	var sc := get_tree().current_scene
-	if sc == null or sc.get_script() == null or sc.get_script().resource_path != "res://scripts/nodeverse_world.gd":
+	if sc == null or sc.get_script() == null or str(sc.get_script().resource_path) != "res://scripts/nodeverse_world.gd":
 		await _return_to_3d_world()
-		await get_tree().process_frame
-		await get_tree().process_frame
 		sc = get_tree().current_scene
 
-	if sc == null or sc.get_script() == null or sc.get_script().resource_path != "res://scripts/nodeverse_world.gd":
+	if sc == null or sc.get_script() == null or str(sc.get_script().resource_path) != "res://scripts/nodeverse_world.gd":
 		stop_bot("3D 월드 씬을 찾을 수 없습니다.")
 		return
 
 	var world: Node = sc
 	_ensure_world_playing(world)
-	if not await _wait_sec(0.5, token):
+	if not await _wait_sec(0.4, token):
 		return
 
-	# ------------------------------------------------------------------------
-	# STEP 1: Walk from current 3D position to the nearest NPC & Talk
-	# ------------------------------------------------------------------------
-	_set_live_status("[Step 1/5] 현재 위치에서 가까운 NPC에게 이동 중", "봇이 로봇 캐릭터를 직접 걸어서 NPC 앞으로 이동합니다...")
-	var target_npc: Node3D = null
-	var best_npc_d: float = INF
-	for npc in world.spawned_npcs:
-		if is_instance_valid(npc):
-			var d: float = world.player.global_position.distance_to(npc.global_position)
-			if d < best_npc_d:
-				best_npc_d = d
-				target_npc = npc
-	if target_npc != null:
-		if best_npc_d > 22.0:
-			# If player is very far, move onto the same island nearby first, then walk the last 8m visibly
-			var approach_start: Vector3 = target_npc.global_position + Vector3(4.5, 0.1, 4.5)
-			world.player.teleport_to(Vector3(approach_start.x, float(world.TOP) + 0.1, approach_start.z))
-		var npc_name_str := String(target_npc.get_meta("npc_name", "NPC"))
-		_set_live_status("[Step 1/5] 3D 로봇 이동 -> " + npc_name_str, "WASD 이동 입력으로 [%s] 앞으로 걸어갑니다..." % npc_name_str)
-		await _walk_3d_player_to(world, target_npc.global_position + Vector3(1.2, 0, 1.0), 1.8, token)
+	# Build rotation of all 7 islands starting from the player's current island!
+	var cur_zone: String = String(world._zone_name) if ("_zone_name" in world and not String(world._zone_name).is_empty()) else "MAIN"
+	var start_idx: int = maxi(0, ISLAND_ORDER.find(cur_zone))
+	var ordered_islands: Array[String] = []
+	for i in ISLAND_ORDER.size():
+		ordered_islands.append(ISLAND_ORDER[(start_idx + i) % ISLAND_ORDER.size()])
+
+	# Visit each of the 7 islands one by one!
+	for idx in ordered_islands.size():
 		if stop_requested or token != _run_token:
 			return
-		_set_live_status("[Step 1/5] 3D 월드 NPC 상호작용 검증", "[%s] 앞에서 [E] 키를 눌러 대화를 진행합니다..." % npc_name_str)
-		world.active_npc = target_npc
-		world._talk_to_npc(target_npc)
-		if not await _wait_sec(1.1, token):
-			return
-		while world.npc_dialog_open():
+		var zkey: String = ordered_islands[idx]
+		var ztitle: String = str(ISLAND_NAMES.get(zkey, zkey))
+		var step_prefix := "[섬 %d/%d · %s]" % [idx + 1, ordered_islands.size(), ztitle]
+
+		# Ensure we are in 3D world before starting this island
+		sc = get_tree().current_scene
+		if sc == null or sc.get_script() == null or str(sc.get_script().resource_path) != "res://scripts/nodeverse_world.gd":
+			await _return_to_3d_world()
+			sc = get_tree().current_scene
+		world = sc
+
+		# Move to this island's walkable start point if not already on this island
+		var cur_p_zone: String = String(world._zone_of(world.player.global_position))
+		if cur_p_zone != zkey:
+			var sp_pos: Vector3 = ISLAND_WALK_STARTS.get(zkey, world._island_spawn(zkey))
+			world.player.teleport_to(sp_pos)
+			world.player.cam_focus = sp_pos
+			world._show_msg("🤖 [테스트 봇] %s 탐험 시작!" % ztitle, 2.5)
+			_set_live_status("%s 도착" % step_prefix, "로봇이 %s을(를) 걸어서 탐험합니다..." % ztitle)
+			if not await _wait_sec(0.55, token):
+				return
+
+		# 1) Walk to this island's NPC and talk
+		var island_npc: Node3D = _find_npc_for_island(world, zkey)
+		if is_instance_valid(island_npc):
+			var npc_name_str := String(island_npc.get_meta("npc_name", "NPC"))
+			_set_live_status("%s NPC에게 걸어가는 중" % step_prefix, "WASD 이동으로 [%s] 앞으로 걸어갑니다..." % npc_name_str)
+			await _walk_3d_player_to(world, island_npc.global_position + Vector3(1.1, 0, 1.1), 1.75, token)
 			if stop_requested or token != _run_token:
 				return
-			world._advance_npc_dialog()
-			if not await _wait_sec(0.9, token):
+			_set_live_status("%s NPC 대화 진행" % step_prefix, "[%s] 앞에서 [E] 키를 눌러 대화합니다..." % npc_name_str)
+			world.active_npc = island_npc
+			world._talk_to_npc(island_npc)
+			if not await _wait_sec(1.0, token):
+				return
+			while world.npc_dialog_open():
+				if stop_requested or token != _run_token:
+					return
+				world._advance_npc_dialog()
+				if not await _wait_sec(0.85, token):
+					return
+
+		# 2) Trigger this island's 3D gimmick & solve 1 quiz question
+		_set_live_status("%s 3D 기믹 및 퀴즈 풀이" % step_prefix, "%s의 3D 학습 장치와 퀴즈를 검증합니다..." % ztitle)
+		world._on_interact()
+		if not await _wait_sec(0.65, token):
+			return
+		world._open_quiz_for_zone(zkey)
+		if not await _wait_sec(1.0, token):
+			return
+		if world.is_quiz_open and not world.current_quiz_item.is_empty():
+			var ans_idx: int = int(world.current_quiz_item.get("a", 0))
+			world._on_quiz_option_selected(ans_idx)
+			if not await _wait_sec(1.1, token):
+				return
+			world._close_quiz()
+			if not await _wait_sec(0.45, token):
 				return
 
-	# ------------------------------------------------------------------------
-	# STEP 2: 3D Island Interactive Props & Current Zone Quiz
-	# ------------------------------------------------------------------------
-	var cur_zone: String = world._zone_name if "_zone_name" in world and not String(world._zone_name).is_empty() else "DS"
-	_set_live_status("[Step 2/5] 현재 섬(%s) 3D 학습 기믹 & 퀴즈 자동 풀이" % cur_zone, "현재 섬의 3D 학습 기믹을 작동하고 퀴즈를 풉니다...")
-	world._on_interact()
-	if not await _wait_sec(0.8, token):
-		return
-
-	world._open_quiz_for_zone(cur_zone)
-	_set_live_status("[Step 2/5] 3D 섬 학습 퀴즈 자동 풀이", "출제된 [%s] 구역 퀴즈의 정답을 판별하여 선택합니다..." % cur_zone)
-	if not await _wait_sec(1.2, token):
-		return
-	if world.is_quiz_open and not world.current_quiz_item.is_empty():
-		var ans_idx: int = int(world.current_quiz_item.get("a", 0))
-		world._on_quiz_option_selected(ans_idx)
-		if not await _wait_sec(1.3, token):
-			return
-		world._close_quiz()
-		if not await _wait_sec(0.5, token):
-			return
-
-	# ------------------------------------------------------------------------
-	# STEP 3: Walk 3D Robot to Nearest Computer Terminal & Enter 2D Menu
-	# ------------------------------------------------------------------------
-	var nearest_term: Node3D = world._nearest_terminal()
-	var term_zone: String = String(nearest_term.get_meta("quiz_zone", "DS")) if is_instance_valid(nearest_term) else "DS"
-	_set_live_status("[Step 3/5] 3D 컴퓨터 터미널(%s)로 걸어서 이동 중" % term_zone, "섬의 컴퓨터 책상 앞으로 로봇이 직접 걸어갑니다...")
-
-	if is_instance_valid(nearest_term):
-		var front_pos: Vector3 = nearest_term.global_position + nearest_term.global_basis.z * 1.5
-		if world.player.global_position.distance_to(front_pos) > 22.0:
-			var near_start := front_pos + Vector3(5.0, 0.1, 4.0)
-			world.player.teleport_to(Vector3(near_start.x, world.TOP + 0.1, near_start.z))
-		await _walk_3d_player_to(world, front_pos, 1.7, token)
-		if stop_requested or token != _run_token:
-			return
-		_set_live_status("[Step 3/5] 컴퓨터 모니터 줌인 및 2D 메뉴 진입", "💻 [E] 컴퓨터 접속 실행 중...")
-		if not await _wait_sec(0.6, token):
-			return
-		await world._open_computer_game()
-		await get_tree().process_frame
-		await get_tree().process_frame
-
-	if not await _wait_sec(1.0, token):
-		return
-
-	# ------------------------------------------------------------------------
-	# STEP 4: Play Current Island's 2D Minigame + Representative Stages Live
-	# ------------------------------------------------------------------------
-	var cat_games: Array = Catalog.games_for(Catalog.selected_category)
-	var first_game: Array = cat_games[0] if not cat_games.is_empty() else ["ST01", "순서가 있는 보관소", "배열", "DS", "ST01_Array"]
-	var demo_stages := [
-		[str(first_game[0]), str(first_game[4]), "%s (%s)" % [str(first_game[1]), str(first_game[2])]]
-	]
-	if str(first_game[0]) != "ST01":
-		demo_stages.append(["ST01", "ST01_Array", "DS-01 순서가 있는 보관소 (배열)"])
-	if str(first_game[0]) != "SQL01":
-		demo_stages.append(["SQL01", "SQL01_Query", "SQ-01 필요한 칸만 꺼내기 (SQL SELECT·WHERE)"])
-
-	for item in demo_stages:
-		if stop_requested or token != _run_token:
-			return
-		var st_code: String = item[0]
-		var st_scene: String = item[1]
-		var st_title: String = item[2]
-		_set_live_status("[Step 4/5] 2D 미니게임 실시간 자동 풀이: " + st_title, "스테이지 진입 및 로봇 조작 시뮬레이션...")
-		get_tree().change_scene_to_file("res://scenes/stages/%s.tscn" % st_scene)
-		await get_tree().process_frame
-		await get_tree().process_frame
-		if not await _wait_sec(0.6, token):
-			return
-		await _play_current_2d_stage(token, 1)
-		if stop_requested or token != _run_token:
-			return
-		if not await _wait_sec(0.7, token):
-			return
-
-	# ------------------------------------------------------------------------
-	# STEP 5: Return to 3D World
-	# ------------------------------------------------------------------------
-	_set_live_status("[Step 5/5] 미니게임 자동 풀이 완료 및 3D 월드 복귀", "실습을 마치고 3D 월드 섬으로 복귀합니다...")
-	await _return_to_3d_world()
-	if not await _wait_sec(0.8, token):
-		return
+		# 3) If this island has a Computer Terminal (DS, ALGO, SQL, DATA), walk to the computer, zoom in, play its 2D minigame, and zoom back out to 3D!
+		if ISLAND_DEFAULT_STAGE.has(zkey):
+			var st_id: String = str(ISLAND_DEFAULT_STAGE[zkey])
+			var st_scene := ""
+			var st_title := st_id
+			for g in Catalog.GAMES:
+				if str(g[0]) == st_id:
+					st_title = "%s (%s)" % [str(g[1]), str(g[2])]
+					st_scene = str(g[4])
+					break
+			if not st_scene.is_empty():
+				var ok_enter := await _walk_to_terminal_and_enter_stage(world, zkey, st_id, st_scene, st_title, token)
+				if not ok_enter or stop_requested or token != _run_token:
+					return
+				await _play_current_2d_stage(token, 1)
+				if stop_requested or token != _run_token:
+					return
+				_set_live_status("%s 미니게임 클리어 -> 3D 월드 복귀" % step_prefix, "컴퓨터에서 나와 다음 섬으로 이동할 준비를 합니다...")
+				if not await _wait_sec(0.65, token):
+					return
+				await _return_to_3d_world()
+				if not await _wait_sec(0.45, token):
+					return
 
 	is_running = false
 	running_bar.visible = false
-	_show_completion_banner("✅ 시나리오 테스트 봇 자동 플레이 시연이 완료되었습니다!")
+	_show_completion_banner("✅ 7개 섬 전체 순회 및 컴퓨터 미니게임 테스트 봇 플레이가 완료되었습니다!")
 
 func _return_to_3d_world() -> void:
 	var world_script = load("res://scripts/nodeverse_world.gd")
 	if world_script and world_script.return_from_2d(get_tree()):
 		await get_tree().process_frame
 		await get_tree().process_frame
+		var w := get_tree().current_scene
+		# Wait until the 1.0s monitor zoom-out camera tween finishes so the 3D player camera is active!
+		var wait_guard := 0
+		while w != null and is_instance_valid(w) and "_zoom_cam" in w and w._zoom_cam != null and wait_guard < 90:
+			wait_guard += 1
+			await get_tree().process_frame
+		if w != null and is_instance_valid(w) and "player" in w and w.player != null:
+			w.player.can_move = true
 		return
 	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 	get_tree().change_scene_to_file("res://scenes/NodeverseWorld.tscn")
