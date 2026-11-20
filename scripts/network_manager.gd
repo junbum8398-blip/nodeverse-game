@@ -104,6 +104,7 @@ var current_task_id: String = "ST01"
 var content_version: String = "base"
 var sequence_num: int = 1
 var player_id: String = ""
+var active_member_id: String = ""
 
 # Internals
 var _http_request: HTTPRequest
@@ -184,10 +185,32 @@ func _get_or_create_install_id() -> String:
 		wf.close()
 	return new_id
 
+func set_active_player_id(member_pid: String) -> void:
+	var cleaned := member_pid.strip_edges()
+	var prev_pid := player_id
+	active_member_id = cleaned
+	if not cleaned.is_empty():
+		player_id = cleaned
+	else:
+		_update_player_id()
+	if player_id != prev_pid:
+		session_id = generate_uuid_v4()
+		sequence_num = 1
+	log_message("학습 이벤트 player_id 설정됨 (회원 ID): %s" % player_id, "info")
+
+func clear_active_player_id() -> void:
+	active_member_id = ""
+	player_id = _get_or_create_install_id()
+	session_id = generate_uuid_v4()
+	sequence_num = 1
+
 func _update_player_id() -> void:
 	var env_pid := OS.get_environment("NODEVERSE_PLAYER_ID").strip_edges()
 	if not env_pid.is_empty():
 		player_id = env_pid
+		return
+	if not active_member_id.is_empty():
+		player_id = active_member_id
 		return
 	var auth_mgr_class = load("res://scripts/auth_manager.gd")
 	if auth_mgr_class:
@@ -199,7 +222,7 @@ func _update_player_id() -> void:
 				if not str(users[u].get("server_player_id", "")).is_empty():
 					player_id = str(users[u]["server_player_id"])
 					return
-				if users[u].has("user_id"):
+				if not str(users[u].get("user_id", "")).is_empty():
 					player_id = str(users[u]["user_id"])
 					return
 			player_id = u
@@ -569,7 +592,7 @@ func _create_update_event(event_type: String, details: Dictionary = {}) -> Dicti
 	return {
 		"schema_version": 2,
 		"event_id": generate_uuid_v4(),
-		"player_id": _get_or_create_install_id(),
+		"player_id": player_id if not player_id.is_empty() else _get_or_create_install_id(),
 		"run_id": current_run_id if not current_run_id.is_empty() else generate_uuid_v4(),
 		"build_version": get_build_version(),
 		"content_version": content_version if not content_version.is_empty() else "base",

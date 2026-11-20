@@ -225,11 +225,19 @@ static func save_user_progress(username: String, save_data: Dictionary) -> bool:
 		return false
 	var store := _get_store()
 	var users: Dictionary = store.get("users", {})
-	if not users.has(uname):
-		return false
+	if not users.has(uname) or not (users[uname] is Dictionary):
+		users[uname] = {
+			"user_id": _generate_uuid_v4(),
+			"created_at": Time.get_datetime_string_from_system(),
+			"last_login": Time.get_datetime_string_from_system(),
+			"save_data": {}
+		}
 	save_data["has_saved_game"] = true
 	save_data["last_saved"] = Time.get_datetime_string_from_system()
 	users[uname]["save_data"] = save_data
+	users[uname]["last_login"] = Time.get_datetime_string_from_system()
+	store["users"] = users
+	store["last_user"] = uname
 	return _save_store(store)
 
 ## Get user save data
@@ -246,28 +254,49 @@ static func get_last_user() -> String:
 	var store := _get_store()
 	return store.get("last_user", "")
 
-## Get ASCII member_id (UUID) for server /api/game/player-login
+## Get member_id / server_player_id (UUID) for telemetry events
 static func get_user_id(username: String) -> String:
 	var uname := username.strip_edges()
 	var store := _get_store()
 	var users: Dictionary = store.get("users", {})
 	if users.has(uname) and users[uname] is Dictionary:
+		var spid := str(users[uname].get("server_player_id", "")).strip_edges()
+		if not spid.is_empty():
+			return spid
 		var uid := str(users[uname].get("user_id", "")).strip_edges()
 		if not uid.is_empty():
 			return uid
 	return _generate_uuid_v4()
 
-## Store server-assigned player_id returned by POST /api/game/player-login
+## Store server-assigned player_id (member_id) returned by POST /api/game/auth/login or register
+## Also ensures the user record exists locally on shared PCs and sets last_user = uname
 static func set_server_player_id(username: String, server_pid: String) -> void:
 	var uname := username.strip_edges()
 	var pid := server_pid.strip_edges()
-	if uname.is_empty() or pid.is_empty():
+	if uname.is_empty():
 		return
 	var store := _get_store()
 	var users: Dictionary = store.get("users", {})
-	if users.has(uname) and users[uname] is Dictionary:
+	if not users.has(uname) or not (users[uname] is Dictionary):
+		users[uname] = {
+			"user_id": pid if not pid.is_empty() else _generate_uuid_v4(),
+			"created_at": Time.get_datetime_string_from_system(),
+			"last_login": Time.get_datetime_string_from_system(),
+			"save_data": {}
+		}
+	if not pid.is_empty():
 		users[uname]["server_player_id"] = pid
-		_save_store(store)
+		users[uname]["user_id"] = pid
+	users[uname]["last_login"] = Time.get_datetime_string_from_system()
+	store["users"] = users
+	store["last_user"] = uname
+	_save_store(store)
+
+## Clear active logged-in user on logout so shared PCs do not mix member records
+static func clear_active_user() -> void:
+	var store := _get_store()
+	store["last_user"] = ""
+	_save_store(store)
 
 ## Reset user progress cleanly for "Start From Scratch (처음부터 시작)"
 static func reset_user_progress(username: String, difficulty: String = "NOVICE") -> Dictionary:

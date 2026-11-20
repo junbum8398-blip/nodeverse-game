@@ -2466,6 +2466,10 @@ func _on_logout() -> void:
 	_save_current_state()
 	current_user = ""
 	user_save_data = {}
+	AuthManager.clear_active_user()
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm and nm.has_method("clear_active_player_id"):
+		nm.call("clear_active_player_id")
 	if auth_pass_edit != null:
 		auth_pass_edit.text = ""
 	_set_game_state(GameState.TITLE_LOGIN)
@@ -2877,8 +2881,9 @@ func _on_auth_submit() -> void:
 		if res.get("success", false):
 			auth_feedback_lbl.text = "🎉 " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
+			var spid_reg := str(res.get("player_id", res.get("member_id", ""))).strip_edges()
 			var sd = res.get("save_data", {"difficulty": "NOVICE", "score": 0, "minigame_cleared": {}, "has_saved_game": false})
-			_on_login_success(u, sd if sd is Dictionary else {})
+			_on_login_success(u, sd if sd is Dictionary else {}, spid_reg)
 		else:
 			auth_feedback_lbl.text = "❌ " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
@@ -2887,19 +2892,21 @@ func _on_auth_submit() -> void:
 			auth_submit_btn.disabled = true
 		var res: Dictionary = {}
 		var is_online := false
+		var spid_login := ""
 		if nm and nm.has_method("game_auth_request"):
 			var net_res: Dictionary = await nm.game_auth_request("login", {"username": u, "password": p})
 			if bool(net_res.get("online", false)):
 				is_online = true
 				res = net_res.get("data", {})
 				if bool(res.get("success", false)):
-					var spid := str(res.get("player_id", "")).strip_edges()
-					if not spid.is_empty():
-						AuthManager.set_server_player_id(u, spid)
+					spid_login = str(res.get("player_id", res.get("member_id", ""))).strip_edges()
+					AuthManager.set_server_player_id(u, spid_login)
 					if res.get("save_data") is Dictionary:
 						AuthManager.save_user_progress(u, res.get("save_data"))
 		if not is_online:
 			res = AuthManager.login(u, p)
+			if bool(res.get("success", false)):
+				spid_login = AuthManager.get_user_id(u)
 		if auth_submit_btn != null:
 			auth_submit_btn.disabled = false
 		if res.get("success", false):
@@ -2910,7 +2917,7 @@ func _on_auth_submit() -> void:
 			else:
 				auth_feedback_lbl.text = "🎉 " + str(res.get("message", ""))
 				auth_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
-			_on_login_success(u, res.get("save_data", {}))
+			_on_login_success(u, res.get("save_data", {}), spid_login)
 		else:
 			auth_feedback_lbl.text = "❌ " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
@@ -3113,7 +3120,7 @@ func _on_guest_login() -> void:
 	var res: Dictionary = AuthManager.guest_login()
 	_on_login_success(res.get("username", "Guest"), res.get("save_data", {}))
 
-func _on_login_success(username: String, save_data: Dictionary) -> void:
+func _on_login_success(username: String, save_data: Dictionary, server_pid: String = "") -> void:
 	current_user = username
 	user_save_data = save_data.duplicate(true)
 	quiz_score = int(user_save_data.get("score", 0))
@@ -3121,7 +3128,19 @@ func _on_login_success(username: String, save_data: Dictionary) -> void:
 	MiniGameBase.set_account_progress(mg_cleared if mg_cleared is Dictionary else {})
 	var nm = get_node_or_null("/root/NetworkManager")
 	if nm:
-		nm.call("_update_player_id")
+		if username == "Guest" or username.is_empty():
+			if nm.has_method("clear_active_player_id"):
+				nm.call("clear_active_player_id")
+			else:
+				nm.call("_update_player_id")
+		else:
+			var resolved_pid := server_pid.strip_edges()
+			if resolved_pid.is_empty():
+				resolved_pid = AuthManager.get_user_id(username)
+			if nm.has_method("set_active_player_id"):
+				nm.call("set_active_player_id", resolved_pid)
+			else:
+				nm.call("_update_player_id")
 	if bool(user_save_data.get("has_saved_game", false)):
 		_set_game_state(GameState.DIFFICULTY_SELECT)
 	else:
