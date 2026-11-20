@@ -31,6 +31,7 @@ var overview_mode: bool = false
 var tour_mode: bool = false
 var can_move: bool = true
 var bot_move_dir: Vector2 = Vector2.ZERO
+var bot_sprint: bool = false
 var is_camera_locked: bool = false
 var cam_height_offset: float = 0.6
 var _orbiting: bool = false
@@ -177,7 +178,7 @@ func _physics_process(delta: float) -> void:
 		_jump_buf = 0.0
 	if wish.length() > 0.01:
 		wish = wish.normalized()
-	var speed: float = SPRINT_SPEED if Input.is_key_pressed(KEY_SHIFT) else WALK_SPEED
+	var speed: float = SPRINT_SPEED if (Input.is_key_pressed(KEY_SHIFT) or bot_sprint) else WALK_SPEED
 	var target: Vector3 = wish * speed
 	var on_floor: bool = is_on_floor()
 	var acc: float = ACCEL if on_floor else AIR_ACCEL
