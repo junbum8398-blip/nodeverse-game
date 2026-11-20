@@ -49,6 +49,10 @@ func _go(id) -> void:
 	var key := str(id)
 	if key == "world":
 		_go_back_to_world()
+	elif key == "test_bot":
+		var bot_ov = get_tree().root.get_node_or_null("LiveTestBotOverlay")
+		if bot_ov and bot_ov.has_method("toggle_launcher"):
+			bot_ov.call("toggle_launcher")
 	elif key == "previous":
 		page -= 1
 	elif key == "next":
@@ -63,6 +67,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color(0.03, 0.06, 0.12, 0.88))
 	var category_name: String = Catalog.CATEGORIES[Catalog.selected_category]
 	text("%s 섬 컴퓨터" % category_name, Vector2(34, 58), 34, C_WHITE)
+	button(Rect2(790, 18, 204, 44), "🤖 테스트 봇 (F5)", "test_bot", true, 18, Color("14745f"))
 	button(Rect2(1010, 18, 236, 44), "3D 월드로 복귀", "world", true, 19, Color("2d6a4f"))
 	text("이 섬의 실습만 볼 수 있어요. 다른 분야는 해당 섬의 컴퓨터에서 열려요.", Vector2(36, 110), 20, C_WHITE)
 	var games := Catalog.games_for(Catalog.selected_category)

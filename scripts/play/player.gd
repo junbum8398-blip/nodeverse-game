@@ -8,6 +8,7 @@ signal focus_changed(target: Interactable)
 
 @export var speed := 230.0
 var active := true
+var bot_move_dir := Vector2.ZERO
 var focus: Interactable = null
 var carried: Node2D = null
 var _t := 0.0
@@ -36,6 +37,8 @@ func _physics_process(delta: float) -> void:
 	var dir := Vector2.ZERO
 	if active:
 		dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+		if bot_move_dir.length() > 0.01:
+			dir = bot_move_dir.normalized()
 	velocity = dir * speed
 	move_and_slide()
 	_moving = dir.length() > 0.1

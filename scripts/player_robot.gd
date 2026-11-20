@@ -30,6 +30,7 @@ var follow_mode: bool = false
 var overview_mode: bool = false
 var tour_mode: bool = false
 var can_move: bool = true
+var bot_move_dir: Vector2 = Vector2.ZERO
 var is_camera_locked: bool = false
 var cam_height_offset: float = 0.6
 var _orbiting: bool = false
@@ -164,6 +165,8 @@ func _physics_process(delta: float) -> void:
 		input_vec.x += 1.0
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
 		input_vec.x -= 1.0
+	if bot_move_dir.length() > 0.01:
+		input_vec = bot_move_dir
 
 	var yaw: float = deg_to_rad(cam_yaw)
 	var fwd: Vector3 = Vector3(-sin(yaw), 0.0, -cos(yaw))

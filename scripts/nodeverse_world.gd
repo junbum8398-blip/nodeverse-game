@@ -192,6 +192,7 @@ var pause_info_lbl: Label
 # CAMERA DEBUG PANEL
 var cam_debug_panel: PanelContainer
 var cam_debug_btn: Button
+var test_bot_btn: Button
 var cam_info_lbl: Label
 var cam_pitch_slider: HSlider
 var cam_yaw_slider: HSlider
@@ -1841,6 +1842,14 @@ func _build_ingame_hud(canvas: CanvasLayer) -> void:
 	top_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_h.add_child(top_spacer)
 
+	# Live Test Bot toggle button (Top Right, right next to Camera Debug)
+	test_bot_btn = Button.new()
+	test_bot_btn.text = "🤖 테스트 봇 (F5)"
+	test_bot_btn.custom_minimum_size = Vector2(152, 36)
+	_apply_btn_styles_g(test_bot_btn, Color(0.08, 0.38, 0.32, 0.90), Color(0.12, 0.52, 0.43, 0.98), Color.WHITE, 14)
+	test_bot_btn.pressed.connect(_on_test_bot_btn_pressed)
+	top_h.add_child(test_bot_btn)
+
 	# Camera Debug toggle button (Top Right)
 	cam_debug_btn = Button.new()
 	cam_debug_btn.text = "📷 카메라 디버그 (F4)"
@@ -1944,6 +1953,17 @@ func _refresh_profile_pill() -> void:
 	diff_badge_lbl.text = " [%s] " % cfg["title"]
 	diff_badge_lbl.modulate = cfg["color"].lightened(0.35)
 	score_badge_lbl.text = "★ %d PTS" % quiz_score
+
+func _on_test_bot_btn_pressed() -> void:
+	var root := get_tree().root
+	var bot_overlay = root.get_node_or_null("LiveTestBotOverlay")
+	if bot_overlay == null:
+		var bot_cls = load("res://scripts/tools/live_test_bot_overlay.gd")
+		if bot_cls != null:
+			bot_overlay = bot_cls.new()
+			root.add_child(bot_overlay)
+	if bot_overlay != null and bot_overlay.has_method("toggle_launcher"):
+		bot_overlay.call("toggle_launcher")
 
 
 # ============================================================================

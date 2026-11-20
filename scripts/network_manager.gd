@@ -319,6 +319,17 @@ func _init_debug_overlay() -> void:
 		if _debug_panel_scene:
 			_debug_panel_instance = _debug_panel_scene.instantiate() as CanvasLayer
 			add_child(_debug_panel_instance)
+	if DisplayServer.get_name() != "headless":
+		var bot_path := "res://scripts/tools/live_test_bot_overlay.gd"
+		if ResourceLoader.exists(bot_path):
+			var bot_cls = load(bot_path)
+			if bot_cls != null:
+				var bot_inst = bot_cls.new()
+				call_deferred("_attach_bot_overlay", bot_inst)
+
+func _attach_bot_overlay(bot_inst: Node) -> void:
+	if get_tree() and get_tree().root and get_tree().root.get_node_or_null("LiveTestBotOverlay") == null:
+		get_tree().root.add_child(bot_inst)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
