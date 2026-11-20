@@ -239,6 +239,48 @@ func sync_player_login(member_id: String, display_name: String) -> void:
 	if err != OK:
 		req.queue_free()
 
+## Online-first DB Auth & Cloud Save helper: POST /api/game/auth/<action>
+## Returns {"online": true/false, "code": HTTP status, "data": Dictionary}
+func game_auth_request(action: String, payload: Dictionary) -> Dictionary:
+	if DisplayServer.get_name() == "headless":
+		return {"online": false, "code": 0, "data": {}}
+	var req := HTTPRequest.new()
+	req.timeout = request_timeout
+	add_child(req)
+	var url := get_base_url() + "/api/game/auth/" + action
+	var headers := PackedStringArray(["Content-Type: application/json; charset=utf-8"])
+	var err := req.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	if err != OK:
+		req.queue_free()
+		return {"online": false, "code": 0, "data": {}}
+	var r: Array = await req.request_completed
+	req.queue_free()
+	var result: int = int(r[0])
+	var code: int = int(r[1])
+	var body: PackedByteArray = r[3]
+	if result != HTTPRequest.RESULT_SUCCESS or code == 0 or code == 404 or code >= 500:
+		return {"online": false, "code": code, "data": {}}
+	var parsed = JSON.parse_string(body.get_string_from_utf8())
+	return {"online": true, "code": code, "data": parsed if parsed is Dictionary else {}}
+
+## Fire-and-forget Cloud Save sync: POST /api/game/auth/save
+func sync_cloud_save(username: String, save_data: Dictionary) -> void:
+	var u := username.strip_edges()
+	if u.is_empty() or u == "Guest" or DisplayServer.get_name() == "headless":
+		return
+	var req := HTTPRequest.new()
+	req.timeout = request_timeout
+	add_child(req)
+	var url := get_base_url() + "/api/game/auth/save"
+	var headers := PackedStringArray(["Content-Type: application/json; charset=utf-8"])
+	var payload := JSON.stringify({"username": u, "save_data": save_data})
+	req.request_completed.connect(func(_res: int, _code: int, _hdrs: PackedStringArray, _body: PackedByteArray):
+		req.queue_free()
+	)
+	var err := req.request(url, headers, HTTPClient.METHOD_POST, payload)
+	if err != OK:
+		req.queue_free()
+
 func set_content_version(ver: String) -> void:
 	content_version = ver.strip_edges() if not ver.strip_edges().is_empty() else "base"
 

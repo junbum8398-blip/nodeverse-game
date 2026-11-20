@@ -2474,6 +2474,9 @@ func _save_current_state() -> void:
 	user_save_data["minigame_cleared"] = MiniGameBase.get_account_progress()
 	user_save_data["has_saved_game"] = true
 	AuthManager.save_user_progress(current_user, user_save_data)
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm and nm.has_method("sync_cloud_save"):
+		nm.call("sync_cloud_save", current_user, user_save_data)
 
 func _display_current_quiz(zone_tag: String, cur_num: int, total_num: int) -> void:
 	var cfg: Dictionary = DIFFICULTY_CONFIG.get(current_difficulty, DIFFICULTY_CONFIG["NOVICE"])
@@ -2833,17 +2836,50 @@ func _on_auth_submit() -> void:
 	var u := auth_user_edit.text.strip_edges()
 	var p := auth_pass_edit.text.strip_edges()
 	var rkey := auth_recovery_edit.text.strip_edges() if auth_recovery_edit != null else ""
+	var nm = get_node_or_null("/root/NetworkManager")
 	if auth_is_register_mode:
-		var res: Dictionary = AuthManager.register(u, p, rkey)
+		if auth_submit_btn != null:
+			auth_submit_btn.disabled = true
+		var res: Dictionary = {}
+		if nm and nm.has_method("game_auth_request"):
+			var net_res: Dictionary = await nm.game_auth_request("register", {"username": u, "password": p, "recovery_key": rkey})
+			if bool(net_res.get("online", false)):
+				res = net_res.get("data", {})
+				if bool(res.get("success", false)):
+					AuthManager.register(u, p, rkey)
+					var spid := str(res.get("player_id", "")).strip_edges()
+					if not spid.is_empty():
+						AuthManager.set_server_player_id(u, spid)
+		if res.is_empty():
+			res = AuthManager.register(u, p, rkey)
+		if auth_submit_btn != null:
+			auth_submit_btn.disabled = false
 		if res.get("success", false):
 			auth_feedback_lbl.text = "🎉 " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
-			_on_login_success(u, {"difficulty": "NOVICE", "score": 0, "minigame_cleared": {}, "has_saved_game": false})
+			var sd = res.get("save_data", {"difficulty": "NOVICE", "score": 0, "minigame_cleared": {}, "has_saved_game": false})
+			_on_login_success(u, sd if sd is Dictionary else {})
 		else:
 			auth_feedback_lbl.text = "❌ " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
 	else:
-		var res: Dictionary = AuthManager.login(u, p)
+		if auth_submit_btn != null:
+			auth_submit_btn.disabled = true
+		var res: Dictionary = {}
+		if nm and nm.has_method("game_auth_request"):
+			var net_res: Dictionary = await nm.game_auth_request("login", {"username": u, "password": p})
+			if bool(net_res.get("online", false)):
+				res = net_res.get("data", {})
+				if bool(res.get("success", false)):
+					var spid := str(res.get("player_id", "")).strip_edges()
+					if not spid.is_empty():
+						AuthManager.set_server_player_id(u, spid)
+					if res.get("save_data") is Dictionary:
+						AuthManager.save_user_progress(u, res.get("save_data"))
+		if res.is_empty():
+			res = AuthManager.login(u, p)
+		if auth_submit_btn != null:
+			auth_submit_btn.disabled = false
 		if res.get("success", false):
 			auth_feedback_lbl.text = "🎉 " + str(res.get("message", ""))
 			auth_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
@@ -3003,8 +3039,21 @@ func _switch_recovery_tab(pw_mode: bool) -> void:
 	rec_feedback_lbl.add_theme_color_override("font_color", Color(0.35, 0.45, 0.46))
 
 func _on_recovery_submit() -> void:
+	var nm = get_node_or_null("/root/NetworkManager")
 	if rec_is_pw_mode:
-		var res := AuthManager.reset_password(rec_user_edit.text, rec_key_edit.text, rec_new_pw_edit.text)
+		var res: Dictionary = {}
+		if nm and nm.has_method("game_auth_request"):
+			var net_res: Dictionary = await nm.game_auth_request("reset-password", {
+				"username": rec_user_edit.text.strip_edges(),
+				"recovery_key": rec_key_edit.text.strip_edges(),
+				"new_password": rec_new_pw_edit.text.strip_edges()
+			})
+			if bool(net_res.get("online", false)):
+				res = net_res.get("data", {})
+				if bool(res.get("success", false)):
+					AuthManager.reset_password(rec_user_edit.text, rec_key_edit.text, rec_new_pw_edit.text)
+		if res.is_empty():
+			res = AuthManager.reset_password(rec_user_edit.text, rec_key_edit.text, rec_new_pw_edit.text)
 		if res.get("success", false):
 			rec_feedback_lbl.text = "✅ " + str(res.get("message", ""))
 			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
@@ -3016,7 +3065,13 @@ func _on_recovery_submit() -> void:
 			rec_feedback_lbl.text = "❌ " + str(res.get("message", ""))
 			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.85, 0.25, 0.25))
 	else:
-		var res := AuthManager.find_usernames_by_recovery(rec_key_edit.text)
+		var res: Dictionary = {}
+		if nm and nm.has_method("game_auth_request"):
+			var net_res: Dictionary = await nm.game_auth_request("find-id", {"recovery_key": rec_key_edit.text.strip_edges()})
+			if bool(net_res.get("online", false)):
+				res = net_res.get("data", {})
+		if res.is_empty():
+			res = AuthManager.find_usernames_by_recovery(rec_key_edit.text)
 		if res.get("success", false):
 			rec_feedback_lbl.text = "✅ " + str(res.get("message", ""))
 			rec_feedback_lbl.add_theme_color_override("font_color", Color(0.15, 0.65, 0.35))
