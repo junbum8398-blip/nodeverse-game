@@ -30,6 +30,8 @@ const REJECTED_DIR: String = "user://telemetry/rejected/"
 const DEFAULT_HOST: String = "192.168.0.81"
 const DEFAULT_PORT: int = 8000
 const DEFAULT_ENDPOINT: String = "/v2/events"
+const DEFAULT_API_HOST: String = "192.168.0.29" # Django 서버 (회원·저장·업데이트)
+const DEFAULT_API_PORT: int = 8000
 const DEFAULT_AUTH_TOKEN: String = "replace-with-a-long-random-local-key"
 const DEFAULT_TIMEOUT: float = 3.0
 const MAX_QUEUE_SIZE: int = 5000
@@ -77,6 +79,8 @@ const UPDATE_EVENT_TYPES: Array[String] = [
 var target_host: String = DEFAULT_HOST
 var target_port: int = DEFAULT_PORT
 var endpoint_path: String = DEFAULT_ENDPOINT
+var api_host: String = DEFAULT_API_HOST
+var api_port: int = DEFAULT_API_PORT
 var auth_token: String = DEFAULT_AUTH_TOKEN
 var auto_send_enabled: bool = true
 var request_timeout: float = DEFAULT_TIMEOUT
@@ -239,7 +243,7 @@ func sync_player_login(member_id: String, display_name: String) -> void:
 	if err != OK:
 		req.queue_free()
 
-## Online-first DB Auth & Cloud Save helper: POST /api/game/auth/<action>
+## Online-first DB Auth & Cloud Save helper: POST /api/game/auth/<action> (Django Server)
 ## Returns {"online": true/false, "code": HTTP status, "data": Dictionary}
 func game_auth_request(action: String, payload: Dictionary) -> Dictionary:
 	if DisplayServer.get_name() == "headless":
@@ -247,9 +251,13 @@ func game_auth_request(action: String, payload: Dictionary) -> Dictionary:
 	var req := HTTPRequest.new()
 	req.timeout = request_timeout
 	add_child(req)
-	var url := get_base_url() + "/api/game/auth/" + action
+	var url := get_api_base_url() + "/api/game/auth/" + action
 	var headers := PackedStringArray(["Content-Type: application/json; charset=utf-8"])
-	var err := req.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	var body_dict := payload.duplicate()
+	body_dict["install_id"] = _get_or_create_install_id()
+	body_dict["build_version"] = get_build_version()
+	body_dict["content_version"] = content_version
+	var err := req.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(body_dict))
 	if err != OK:
 		req.queue_free()
 		return {"online": false, "code": 0, "data": {}}
@@ -258,12 +266,13 @@ func game_auth_request(action: String, payload: Dictionary) -> Dictionary:
 	var result: int = int(r[0])
 	var code: int = int(r[1])
 	var body: PackedByteArray = r[3]
-	if result != HTTPRequest.RESULT_SUCCESS or code == 0 or code == 404 or code >= 500:
-		return {"online": false, "code": code, "data": {}}
 	var parsed = JSON.parse_string(body.get_string_from_utf8())
-	return {"online": true, "code": code, "data": parsed if parsed is Dictionary else {}}
+	var is_server_reply: bool = parsed is Dictionary and parsed.has("success")
+	if result != HTTPRequest.RESULT_SUCCESS or code == 0 or code >= 500 or not is_server_reply:
+		return {"online": false, "code": code, "data": {}}
+	return {"online": true, "code": code, "data": parsed}
 
-## Fire-and-forget Cloud Save sync: POST /api/game/auth/save
+## Fire-and-forget Cloud Save sync: POST /api/game/auth/save (Django Server)
 func sync_cloud_save(username: String, save_data: Dictionary) -> void:
 	var u := username.strip_edges()
 	if u.is_empty() or u == "Guest" or DisplayServer.get_name() == "headless":
@@ -271,7 +280,7 @@ func sync_cloud_save(username: String, save_data: Dictionary) -> void:
 	var req := HTTPRequest.new()
 	req.timeout = request_timeout
 	add_child(req)
-	var url := get_base_url() + "/api/game/auth/save"
+	var url := get_api_base_url() + "/api/game/auth/save"
 	var headers := PackedStringArray(["Content-Type: application/json; charset=utf-8"])
 	var payload := JSON.stringify({"username": u, "save_data": save_data})
 	req.request_completed.connect(func(_res: int, _code: int, _hdrs: PackedStringArray, _body: PackedByteArray):
@@ -340,6 +349,11 @@ func load_config() -> void:
 		var d: Dictionary = json.data
 		target_host = str(d.get("host", DEFAULT_HOST)).strip_edges()
 		target_port = int(d.get("port", DEFAULT_PORT))
+		var saved_api_host := str(d.get("api_host", DEFAULT_API_HOST)).strip_edges()
+		api_host = saved_api_host if not saved_api_host.is_empty() else DEFAULT_API_HOST
+		api_port = int(d.get("api_port", DEFAULT_API_PORT))
+		if api_port <= 0:
+			api_port = DEFAULT_API_PORT
 		var saved_ep := str(d.get("endpoint", DEFAULT_ENDPOINT)).strip_edges()
 		if saved_ep.is_empty() or saved_ep == "/v1/events":
 			saved_ep = DEFAULT_ENDPOINT
@@ -358,6 +372,8 @@ func save_config() -> bool:
 		"host": target_host,
 		"port": target_port,
 		"endpoint": endpoint_path,
+		"api_host": api_host,
+		"api_port": api_port,
 		"auth_token": auth_token,
 		"auto_send": auto_send_enabled,
 		"timeout": request_timeout
@@ -391,6 +407,23 @@ func get_base_url() -> String:
 	if h.begins_with("https://") and (target_port == 443 or target_port == 80):
 		return h
 	return "%s:%d" % [h, target_port]
+
+func get_api_base_url() -> String:
+	var h := api_host.strip_edges()
+	if h.is_empty():
+		h = DEFAULT_API_HOST
+	if not (h.begins_with("http://") or h.begins_with("https://")):
+		var is_local := (
+			h == "localhost"
+			or h.begins_with("127.")
+			or h.begins_with("192.168.")
+			or h.begins_with("10.")
+			or h.begins_with("172.")
+		)
+		h = ("http://" if is_local else "https://") + h
+	if h.begins_with("https://") and (api_port == 443 or api_port == 80):
+		return h
+	return "%s:%d" % [h, api_port]
 
 func get_full_url() -> String:
 	return get_base_url() + endpoint_path

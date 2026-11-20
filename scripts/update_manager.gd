@@ -66,9 +66,9 @@ func get_manifest_url() -> String:
 	if not env_url.is_empty():
 		return env_url
 	var nm := _get_net_mgr()
-	if nm and nm.has_method("get_base_url"):
-		return str(nm.call("get_base_url")) + MANIFEST_ENDPOINT
-	return "http://192.168.0.81:8000" + MANIFEST_ENDPOINT
+	if nm and nm.has_method("get_api_base_url"):
+		return str(nm.call("get_api_base_url")) + MANIFEST_ENDPOINT
+	return "http://192.168.0.29:8000" + MANIFEST_ENDPOINT
 
 # ==========================================
 # BUILD VERSION CHANGE DETECTION
