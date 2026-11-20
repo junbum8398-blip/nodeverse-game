@@ -60,14 +60,6 @@ func _setup_ui() -> void:
 		bot_btn.pressed.connect(_on_bot_verify_pressed)
 		btn_row.add_child(bot_btn)
 
-		var pdf_btn := Button.new()
-		pdf_btn.name = "OpenPdfBtn"
-		pdf_btn.text = "📄 결과서 PDF"
-		pdf_btn.custom_minimum_size = Vector2(115, 32)
-		pdf_btn.focus_mode = Control.FOCUS_NONE
-		pdf_btn.pressed.connect(_on_open_pdf_pressed)
-		btn_row.add_child(pdf_btn)
-
 	var close_btn = $Panel/VBox/Header/CloseBtn
 	if close_btn:
 		close_btn.pressed.connect(_on_close_panel)
@@ -243,14 +235,3 @@ func _on_bot_verify_pressed() -> void:
 			return
 
 	_update_status_display("ERROR", "시나리오 봇 실행 결과를 읽지 못했습니다 (code=%d)" % exit_code)
-
-func _on_open_pdf_pressed() -> void:
-	var pdf_rel := "res://output/reports/NODEVERSE_자동화봇_테스트결과서.pdf"
-	var pdf_global := ProjectSettings.globalize_path(pdf_rel)
-	if FileAccess.file_exists(pdf_rel):
-		OS.shell_open(pdf_global)
-		if _net_mgr and _net_mgr.has_method("log_message"):
-			_net_mgr.call("log_message", "테스트 결과서 PDF 열기: " + pdf_global, "info")
-	else:
-		if _net_mgr and _net_mgr.has_method("log_message"):
-			_net_mgr.call("log_message", "결과서 PDF가 아직 없습니다. 먼저 [🤖 시나리오 봇 검증]을 눌러주세요.", "warn")
