@@ -3,7 +3,12 @@ extends RefCounted
 ## 기획 ID(DS-01 ...)는 PDF 명세의 식별자다.
 
 static var selected_category := "DS"
-const CATEGORIES := {"DS": "자료구조", "ALGO": "알고리즘", "SQL": "SQL", "DATA": "데이터 탐색"}
+const CATEGORIES := {"DS": "자료구조", "ALGO": "알고리즘", "SQL": "SQL", "DATA": "데이터 탐색", "CHALLENGE": "종합 도전"}
+
+const CHALLENGE_GAMES := [
+	["ST10", "판테온 종합 코딩테스트", "목표 결과 맞추기", "CHALLENGE", "CHAL01_CodingTest", "결과값이 나오도록 직접 타이핑·단어 조각으로 코드 완성", "ST10", "CH-01"],
+	["ST10", "학습 지원 센터", "보너스 · 자료구조 종합", "CHALLENGE", "ST10_Integrated", "상황에 맞는 자료구조 선택", "ST10", "보너스"]
+]
 
 # [실행 ID, 제목, 주제, 분야, 씬, 설명, 배경 폴더, 기획 ID]
 const GAMES := [
@@ -34,4 +39,6 @@ const GAMES := [
 ]
 
 static func games_for(category: String) -> Array:
+	if category == "CHALLENGE":
+		return CHALLENGE_GAMES
 	return GAMES.filter(func(game): return game[3] == category)

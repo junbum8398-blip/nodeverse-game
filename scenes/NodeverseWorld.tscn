@@ -1994,7 +1994,7 @@ transform = Transform3D(0.9199563, 0, -0.3920207, 0, 1, 0, 0.3920207, 0, 0.91995
 [node name="Bridges" type="Node3D" parent="." unique_id=1681175806]
 
 [node name="Bridge_DATA_ALGO5" parent="Bridges" unique_id=1821936240 instance=ExtResource("19_qhuqu")]
-transform = Transform3D(-1.2499803, 0, -0.005606425, 0, 1, 0, 0.007008034, 0, -0.99998426, -12.429659, 0.43359947, 6.4091463)
+transform = Transform3D(-1.42, 0, -0.005606425, 0, 1, 0, 0.007008034, 0, -0.99998426, -12.375, 0.036875, 6.4091463)
 
 [node name="Bridge_DATA_ALGO4" parent="Bridges" unique_id=483623185 instance=ExtResource("19_qhuqu")]
 transform = Transform3D(0.39467636, 0, 1.1638299, 0, 1, 0, -1.2910192, 0, 0.35579342, -19.986792, 0.073750496, -4.9117813)
@@ -2005,6 +2005,7 @@ transform = Transform3D(0.9210524, 0, -0.38944098, 0, 1, 0, 0.38944098, 0, 0.921
 [node name="Bridge_ALGO" parent="Bridges" unique_id=542438007 instance=ExtResource("16_xs0tg")]
 
 [node name="Bridge_CHALLENGE" parent="Bridges" unique_id=895864771 instance=ExtResource("18_wigla")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1.266, 0, 0, 0, 0, -23.0)
 
 [node name="Bridge_DATA_ALGO" parent="Bridges" unique_id=1640100508 instance=ExtResource("19_qhuqu")]
 transform = Transform3D(0.9206672, 0, -0.39034855, 0, 1, 0, 0.39034855, 0, 0.9206672, 15.632444, -0.024968624, -22.617609)
@@ -2925,6 +2926,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.999916, 1, 4.9519825)
 [node name="ComputerTerminal_ALGO" parent="Computers" unique_id=1263066196 instance=ExtResource("learning_extra_1")]
 
 [node name="ComputerTerminal_DATA" parent="Computers" unique_id=1134029978 instance=ExtResource("learning_extra_2")]
+
+[node name="ComputerTerminal_CHALLENGE" parent="Computers" unique_id=1982736451 instance=ExtResource("347_68ysr")]
+transform = Transform3D(0.9063078, 0, -0.42261827, 0, 1, 0, 0.42261827, 0, 0.9063078, 3.4, 1, -29.8)
+metadata/world_terminal = true
+metadata/quiz_zone = "CHALLENGE"
 
 [node name="NPCs" type="Node3D" parent="." unique_id=438366902]
 

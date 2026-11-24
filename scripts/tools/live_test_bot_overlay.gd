@@ -23,7 +23,8 @@ const ISLAND_DEFAULT_STAGE: Dictionary = {
 	"DS": "ST01",
 	"ALGO": "ALG01",
 	"SQL": "SQL01",
-	"DATA": "DATA01"
+	"DATA": "DATA01",
+	"CHALLENGE": "CHAL01_CodingTest"
 }
 
 var _nav_astar: AStar2D = null
@@ -627,8 +628,8 @@ func _run_full_scenario_tour(token: int) -> void:
 			var st_id: String = str(ISLAND_DEFAULT_STAGE[zkey])
 			var st_scene := ""
 			var st_title := st_id
-			for g in Catalog.GAMES:
-				if str(g[0]) == st_id:
+			for g in (Catalog.GAMES + Catalog.CHALLENGE_GAMES):
+				if str(g[0]) == st_id or str(g[4]) == st_id:
 					st_title = "%s (%s)" % [str(g[1]), str(g[2])]
 					st_scene = str(g[4])
 					break
@@ -877,10 +878,38 @@ func _play_current_2d_stage(token: int, max_levels: int = 2) -> void:
 		await _play_visual_st01(stage, token, max_levels)
 	elif spath == "res://scripts/minigames/sql_drawer.gd":
 		await _play_visual_sql_drawer(stage, token, max_levels)
+	elif spath == "res://scripts/minigames/coding_test_challenge.gd":
+		await _play_visual_coding_test(stage, token, max_levels)
 	elif stage.has_method("on_button") and "activity" in stage:
 		await _play_visual_lab_stage(stage, token, max_levels)
 	elif stage is WalkStage:
 		await _play_visual_walk_stage(stage, token, max_levels)
+
+func _play_visual_coding_test(stage: Node, token: int, max_levels: int) -> void:
+	var total_lv := mini(max_levels, stage.LEVELS.size())
+	for lv in total_lv:
+		if stop_requested or token != _run_token or not is_instance_valid(stage):
+			return
+		stage._load_level(lv)
+		var lv_data: Dictionary = stage.LEVELS[lv]
+		var ans: String = str(lv_data.answers[0])
+		_set_live_status("판테온 코딩테스트 (%d/%d단계)" % [lv + 1, total_lv], "목표 결과에 맞춰 '%s' 타이핑 중..." % ans)
+		if not await _wait_sec(0.35, token):
+			return
+		for ci in ans.length():
+			if stop_requested or token != _run_token or not is_instance_valid(stage):
+				return
+			var ch := ans.substr(ci, 1)
+			stage.typed_code += ch
+			stage._trigger_robot_typing_hop(ch, false)
+			stage.queue_redraw()
+			if not await _wait_sec(0.08, token):
+				return
+		if not await _wait_sec(0.3, token):
+			return
+		stage._submit_code()
+		if not await _wait_sec(0.55, token):
+			return
 
 func _skip_2d_dialogue_visually(stage: Node, token: int) -> void:
 	if not ("hud" in stage) or stage.hud == null:
