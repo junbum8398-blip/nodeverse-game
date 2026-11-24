@@ -63,7 +63,7 @@ func _ready() -> void:
 	code_font = f
 	robot = Sprite2D.new()
 	robot.texture = load("res://textures/sprites/robot.png")
-	robot.scale = Vector2(0.42, 0.42)
+	robot.scale = Vector2(0.32, 0.32)
 	robot.offset = Vector2(0, -71)
 	robot.z_index = 5
 	add_child(robot)
@@ -156,8 +156,10 @@ func summary_rect(i: int) -> Rect2:
 	return Rect2(150 + i * (w + 8), 524, w, 112)
 
 func robot_pos() -> Vector2:
+	if phase == "help" or phase == "palette":
+		return Vector2(54.0, 108.0)
 	var rect: Rect2 = summary_rect(mini(c, res.groups.size() - 1)) if activity == "group" and r == 5 else cell_rect(r, c)
-	return rect.position + Vector2(rect.size.x * 0.82, rect.size.y * 0.98)
+	return rect.position + Vector2(18.0, 28.0)
 
 func _place_robot(now := false) -> void:
 	var p := robot_pos()
@@ -765,6 +767,8 @@ func fit(t: String, width: float, size: int, f: Font = null) -> int:
 	return s
 
 func _draw() -> void:
+	if robot != null and not moving:
+		robot.position = robot_pos()
 	img("bg_" + game.bg, Rect2(0, 0, 1280, 720))
 	_draw_mission()
 	match activity:
