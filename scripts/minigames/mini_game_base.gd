@@ -382,7 +382,10 @@ func button(r: Rect2, label: String, id, enabled := true, size := 18, col := C_B
 	var off := Vector2(0, 0)
 	pbox(Rect2(r.position + Vector2(0, PX), r.size), C_INK, C_INK, false)
 	pbox(Rect2(r.position + off, r.size), fill, C_INK)
-	text_c(label, r.position + off + Vector2(r.size.x / 2, r.size.y / 2 + size * 0.36), size, C_WHITE if enabled else Color(0.85, 0.85, 0.85))
+	var fit_s := size
+	while fit_s > 10 and text_w(label, fit_s) > r.size.x - 14.0:
+		fit_s -= 1
+	text_c(label, r.position + off + Vector2(r.size.x / 2, r.size.y / 2 + fit_s * 0.36), fit_s, C_WHITE if enabled else Color(0.85, 0.85, 0.85))
 	_buttons.append([r, id, enabled])
 	return hover
 
@@ -473,15 +476,26 @@ func robot(p: Vector2, carrying := "") -> void:
 		crate(Rect2(p.x - 26, o.y - 52, 52, 48), carrying)
 
 func text(t: String, pos: Vector2, size: int, c: Color, max_w := -1.0) -> void:
-	draw_string_outline(font, pos, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, size, 4, Color(C_INK, c.a * 0.55) if c.v > 0.5 else Color(0, 0, 0, 0))
-	draw_string(font, pos, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, size, c)
+	var fit_s := size
+	if max_w > 0.0:
+		while fit_s > 10 and text_w(t, fit_s) > max_w:
+			fit_s -= 1
+	draw_string_outline(font, pos, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, fit_s, 4, Color(C_INK, c.a * 0.55) if c.v > 0.5 else Color(0, 0, 0, 0))
+	draw_string(font, pos, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, fit_s, c)
 
-func text_c(t: String, pos: Vector2, size: int, c: Color) -> void:
-	text(t, Vector2(pos.x - text_w(t, size) / 2, pos.y), size, c)
+func text_c(t: String, pos: Vector2, size: int, c: Color, max_w := -1.0) -> void:
+	var fit_s := size
+	if max_w > 0.0:
+		while fit_s > 10 and text_w(t, fit_s) > max_w:
+			fit_s -= 1
+	text(t, Vector2(pos.x - text_w(t, fit_s) / 2, pos.y), fit_s, c)
 
 func text_w(t: String, size: int) -> float:
 	return font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
 func label_box(r: Rect2, t: String, fill := C_PANEL, tc := C_INK, size := 18) -> void:
 	pbox(r, fill, C_INK, false)
-	text_c(t, r.position + Vector2(r.size.x / 2, r.size.y / 2 + size * 0.36), size, tc)
+	var fit_s := size
+	while fit_s > 10 and text_w(t, fit_s) > r.size.x - 14.0:
+		fit_s -= 1
+	text_c(t, r.position + Vector2(r.size.x / 2, r.size.y / 2 + fit_s * 0.36), fit_s, tc)

@@ -375,6 +375,50 @@ func _process(delta: float) -> void:
 			keycap_sparks.remove_at(i)
 	queue_redraw()
 
+func _fit_size(t: String, max_w: float, base_size: int, fnt: Font = null) -> int:
+	var f: Font = fnt if fnt != null else font
+	var s := base_size
+	while s > 10 and f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, s).x > max_w:
+		s -= 1
+	return s
+
+func _text_fit(t: String, pos: Vector2, max_w: float, base_size: int, col: Color, fnt: Font = null) -> void:
+	var f: Font = fnt if fnt != null else font
+	var s := _fit_size(t, max_w, base_size, f)
+	if f == font:
+		text(t, pos, s, col, max_w)
+	else:
+		draw_string(f, pos, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, s, col)
+
+func _button_fit(r: Rect2, label: String, id: String, enabled := true, base_size := 17, col := C_BLUE) -> void:
+	var s := _fit_size(label, r.size.x - 18.0, base_size, font)
+	button(r, label, id, enabled, s, col)
+
+func _draw_bubble_text(rect: Rect2, msg: String, base_size: int, col: Color) -> void:
+	var max_w := rect.size.x - 24.0
+	if font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, base_size).x <= max_w:
+		text_c(msg, rect.get_center() + Vector2(0, 6), base_size, col)
+		return
+	# 단어 단위로 2줄 자동 줄바꿈하여 말풍선 칸 안에 깔끔하게 배치
+	var words := msg.split(" ", false)
+	var line1 := ""
+	var line2 := ""
+	for w in words:
+		var cand := w if line1.is_empty() else (line1 + " " + w)
+		if line2.is_empty() and font.get_string_size(cand, HORIZONTAL_ALIGNMENT_LEFT, -1, base_size).x <= max_w:
+			line1 = cand
+		else:
+			line2 = w if line2.is_empty() else (line2 + " " + w)
+	if line1.is_empty():
+		var half := msg.length() / 2
+		line1 = msg.substr(0, half)
+		line2 = msg.substr(half)
+	var s1 := _fit_size(line1, max_w, base_size, font)
+	var s2 := _fit_size(line2, max_w, base_size, font)
+	var s := mini(s1, s2)
+	text_c(line1, rect.get_center() + Vector2(0, -7), s, col)
+	text_c(line2, rect.get_center() + Vector2(0, 15), s, col)
+
 func _draw() -> void:
 	_buttons.clear()
 	if bg:
@@ -382,34 +426,34 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color(0.05, 0.08, 0.15, 0.92))
 
 	var lv: Dictionary = LEVELS[level]
-	# 상단 헤더 바
+	# 상단 헤더 바 (오른쪽 버튼과 절대 겹치지 않게 폭 830px 안으로 자동 맞춤)
 	pbox(Rect2(24, 14, 1232, 62), Color("111b2e"), Color("38bdf8"))
-	text("🏛️ 판테온 종합 코딩테스트 — " + str(lv.badge), Vector2(42, 42), 20, Color("7dd3fc"))
-	text(str(lv.title) + " : " + str(lv.goal), Vector2(42, 66), 15, Color("e2e8f0"))
-	button(Rect2(890, 24, 150, 42), "💡 힌트 보기", "hint", true, 16, Color("1e3a8a"))
-	button(Rect2(1052, 24, 188, 42), "3D 월드로 복귀", "world", true, 16, Color("2d6a4f"))
+	_text_fit("🏛️ 판테온 종합 코딩테스트 — " + str(lv.badge), Vector2(42, 40), 830.0, 20, Color("7dd3fc"))
+	_text_fit(str(lv.title) + " : " + str(lv.goal), Vector2(42, 64), 830.0, 15, Color("e2e8f0"))
+	_button_fit(Rect2(890, 24, 150, 42), "💡 힌트 보기", "hint", true, 16, Color("1e3a8a"))
+	_button_fit(Rect2(1052, 24, 188, 42), "3D 월드로 복귀", "world", true, 16, Color("2d6a4f"))
 
 	# 1. 좌상단: 주어진 입력 (Input) vs 우상단: 만들어야 할 목표 결과 (Target Output)
 	var in_box := Rect2(24, 84, 444, 78)
 	pbox(in_box, Color("16213a"), Color("475569"))
-	text("📥 주어진 입력 데이터 (Input)", in_box.position + Vector2(16, 25), 16, Color("93c5fd"))
-	draw_string(code_font, in_box.position + Vector2(16, 56), str(lv.input_label), HORIZONTAL_ALIGNMENT_LEFT, 412, 16, Color("f8fafc"))
+	_text_fit("📥 주어진 입력 데이터 (Input)", in_box.position + Vector2(16, 26), 412.0, 16, Color("93c5fd"))
+	_text_fit(str(lv.input_label), in_box.position + Vector2(16, 56), 412.0, 16, Color("f8fafc"), code_font)
 
 	var target_box := Rect2(480, 84, 444, 78)
 	pbox(target_box, Color("132a24"), Color("34d399"))
-	text("🎯 만들어야 할 목표 결과 (Target Output)", target_box.position + Vector2(16, 25), 16, Color("6ee7b7"))
-	draw_string(code_font, target_box.position + Vector2(16, 56), "▶ " + str(lv.target_output), HORIZONTAL_ALIGNMENT_LEFT, 412, 17, Color("a7f3d0"))
+	_text_fit("🎯 만들어야 할 목표 결과 (Target Output)", target_box.position + Vector2(16, 26), 412.0, 16, Color("6ee7b7"))
+	_text_fit("▶ " + str(lv.target_output), target_box.position + Vector2(16, 56), 412.0, 17, Color("a7f3d0"), code_font)
 
 	# 2. 중앙 코드 에디터 (직접 키보드 타이핑 + 단어 조각 클릭 모두 가능, 8줄 이상 여유롭게 표시)
 	var ed_box := Rect2(24, 170, 900, 258)
 	pbox(ed_box, Color("0b111e"), Color("60a5fa"))
-	text("⌨️ 코드 에디터 — 키보드로 직접 타이핑하거나 아래 단어 조각을 클릭해 빈칸을 완성하세요!", ed_box.position + Vector2(16, 24), 15, Color("93c5fd"))
+	_text_fit("⌨️ 코드 에디터 — 키보드로 직접 타이핑하거나 아래 단어 조각을 클릭해 빈칸을 완성하세요!", ed_box.position + Vector2(16, 26), 864.0, 15, Color("93c5fd"))
 
 	var y := ed_box.position.y + 52.0
 	var line_step := 24.0
 	var line_no := 1
 	for ln: String in lv.code_before:
-		draw_string(code_font, Vector2(ed_box.position.x + 18, y), "%d | %s" % [line_no, ln], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("cbd5e1"))
+		_text_fit("%d | %s" % [line_no, ln], Vector2(ed_box.position.x + 18, y), 860.0, 17, Color("cbd5e1"), code_font)
 		y += line_step
 		line_no += 1
 
@@ -419,50 +463,50 @@ func _draw() -> void:
 	draw_rect(input_line_rect, Color("fbbf24"), false, 2.0)
 	var cursor_str := "▌" if int(time * 2.5) % 2 == 0 and phase == "play" else ""
 	var active_line := "%d | %s%s%s%s" % [line_no, str(lv.code_prefix), typed_code, cursor_str, str(lv.code_suffix)]
-	draw_string(code_font, Vector2(ed_box.position.x + 18, y), active_line, HORIZONTAL_ALIGNMENT_LEFT, ed_box.size.x - 36, 18, Color("fde047"))
+	_text_fit(active_line, Vector2(ed_box.position.x + 18, y), 860.0, 18, Color("fde047"), code_font)
 	y += line_step + 2.0
 	line_no += 1
 
 	for ln2: String in lv.code_after:
-		draw_string(code_font, Vector2(ed_box.position.x + 18, y), "%d | %s" % [line_no, ln2], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("cbd5e1"))
+		_text_fit("%d | %s" % [line_no, ln2], Vector2(ed_box.position.x + 18, y), 860.0, 17, Color("cbd5e1"), code_font)
 		y += line_step
 		line_no += 1
 
 	# 3. 단어 조각 조립 트레이 (클릭 한 번으로 코드 입력)
 	var tok_box := Rect2(24, 434, 900, 90)
 	pbox(tok_box, Color("151f36"), Color("475569"))
-	text("🧩 단어 조각 클릭으로 조립 (직접 키보드 타이핑도 가능!):", tok_box.position + Vector2(16, 23), 15, Color("cbd5e1"))
+	_text_fit("🧩 단어 조각 클릭으로 조립 (직접 키보드 타이핑도 가능!):", tok_box.position + Vector2(16, 24), 864.0, 15, Color("cbd5e1"))
 	var tx := tok_box.position.x + 16.0
 	var ty := tok_box.position.y + 34.0
 	for tok: String in lv.tokens:
-		var bw := maxf(float(tok.length()) * 13.0 + 30.0, 68.0)
-		button(Rect2(tx, ty, bw, 42), tok, "tok:" + tok, phase == "play", 17, Color("1e3a5f"))
-		tx += bw + 10.0
-	button(Rect2(tok_box.end.x - 236, ty, 108, 42), "⌫ 단어지움", "back_word", phase == "play", 15, Color("475569"))
-	button(Rect2(tok_box.end.x - 118, ty, 102, 42), "↺ 초기화", "clear", phase == "play", 15, Color("7f1d1d"))
+		var bw := maxf(code_font.get_string_size(tok, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 28.0, 64.0)
+		_button_fit(Rect2(tx, ty, bw, 42), tok, "tok:" + tok, phase == "play", 16, Color("1e3a5f"))
+		tx += bw + 8.0
+	_button_fit(Rect2(tok_box.end.x - 236, ty, 108, 42), "⌫ 단어지움", "back_word", phase == "play", 15, Color("475569"))
+	_button_fit(Rect2(tok_box.end.x - 118, ty, 102, 42), "↺ 초기화", "clear", phase == "play", 15, Color("7f1d1d"))
 
 	# 4. 실시간 내 코드 출력 비교 콘솔 (Live Output vs Target Output)
 	var ev := _evaluate_live_output()
 	var matched: bool = ev.get("matched", false)
 	var out_box := Rect2(24, 530, 900, 116)
 	pbox(out_box, Color("0f291e") if matched else Color("1c1926"), Color("34d399") if matched else Color("f59e0b"))
-	text("⚡ 내 코드의 실시간 출력 (Live Output) — 위쪽 [🎯 목표 결과]와 비교해 보세요!", out_box.position + Vector2(16, 26), 16, Color("6ee7b7") if matched else Color("fcd34d"))
-	draw_string(code_font, out_box.position + Vector2(16, 62), "▶ " + str(ev.get("output", "")), HORIZONTAL_ALIGNMENT_LEFT, 680, 18, Color("a7f3d0") if matched else Color("fef08a"))
-	text(str(ev.get("note", "")), out_box.position + Vector2(16, 96), 15, Color("86efac") if matched else Color("cbd5e1"))
+	_text_fit("⚡ 내 코드의 실시간 출력 (Live Output) — 위쪽 [🎯 목표 결과]와 비교해 보세요!", out_box.position + Vector2(16, 26), 656.0, 15, Color("6ee7b7") if matched else Color("fcd34d"))
+	_text_fit("▶ " + str(ev.get("output", "")), out_box.position + Vector2(16, 62), 656.0, 18, Color("a7f3d0") if matched else Color("fef08a"), code_font)
+	_text_fit(str(ev.get("note", "")), out_box.position + Vector2(16, 96), 656.0, 14, Color("86efac") if matched else Color("cbd5e1"))
 
 	var sub_lbl := "▶ 다음 단계로 (Enter)" if phase == "solved" else ("🏆 코딩테스트 완료!" if phase == "all_cleared" else "▶ 채점 & 제출 (Enter)")
-	button(Rect2(out_box.end.x - 216, out_box.position.y + 32, 198, 56), sub_lbl, "submit", true, 18, Color("059669") if (matched or phase != "play") else Color("2563eb"))
+	_button_fit(Rect2(out_box.end.x - 216, out_box.position.y + 30, 198, 56), sub_lbl, "submit", true, 16, Color("059669") if (matched or phase != "play") else Color("2563eb"))
 
 	# 5. 우측 전용 코딩 로봇 데스크 (글씨를 절대 가리지 않는 독립 코너 + 타자 애니메이션)
 	var desk_box := Rect2(936, 84, 320, 562)
 	pbox(desk_box, Color("131c31"), Color("38bdf8"))
-	text("🤖 코딩 파트너 로봇", desk_box.position + Vector2(20, 30), 19, Color("7dd3fc"))
-	text("타자를 칠 때마다 함께 코딩해요!", desk_box.position + Vector2(20, 52), 14, Color("94a3b8"))
+	_text_fit("🤖 코딩 파트너 로봇", desk_box.position + Vector2(20, 30), 280.0, 19, Color("7dd3fc"))
+	_text_fit("타자를 칠 때마다 함께 코딩해요!", desk_box.position + Vector2(20, 52), 280.0, 14, Color("94a3b8"))
 
-	# 로봇 말풍선 (헤더 아래에 깔끔하게 배치)
+	# 로봇 말풍선 (2줄 자동 줄바꿈 & 폰트 크기 자동 조절로 절대 칸 밖으로 튀어나가지 않음!)
 	var bubble_rect := Rect2(954, 148, 284, 68)
 	pbox(bubble_rect, Color("fffbeb"), Color("f59e0b"))
-	text_c(robot_bubble, bubble_rect.get_center() + Vector2(0, 5), 14, Color("1e293b"))
+	_draw_bubble_text(bubble_rect, robot_bubble, 14, Color("1e293b"))
 
 	# 로봇 책상과 미니 노트북 그림
 	var table_rect := Rect2(968, 356, 256, 22)
@@ -483,14 +527,14 @@ func _draw() -> void:
 		draw_string(code_font, sp_pos + Vector2(-8, 5), str(sp["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.1, 0.1, 0.15, alpha))
 
 	# 우측 로봇 데스크 하단 스테이지 선택 탭 (1~4단계)
-	text("📚 코딩테스트 문제 목록 (4단계)", Vector2(956, 422), 16, Color("93c5fd"))
+	_text_fit("📚 코딩테스트 문제 목록 (4단계)", Vector2(956, 422), 280.0, 16, Color("93c5fd"))
 	for i in LEVELS.size():
 		var lv_btn := Rect2(954, 438 + i * 48, 284, 40)
 		var prefix := "✅ " if i < level or phase == "all_cleared" else ("▶ " if i == level else "   ")
 		var bcol := Color("047857") if i == level else Color("1e293b")
-		button(lv_btn, prefix + str(LEVELS[i].badge), "lv:" + str(i), true, 15, bcol)
+		_button_fit(lv_btn, prefix + str(LEVELS[i].badge), "lv:" + str(i), true, 15, bcol)
 
 	# 6. 하단 상태 표시 바
 	var foot_box := Rect2(24, 656, 1232, 48)
 	pbox(foot_box, Color("064e3b") if status_good else Color("0f172a"), Color("34d399") if status_good else Color("475569"))
-	text(status_msg, foot_box.position + Vector2(18, 30), 17, Color("a7f3d0") if status_good else Color("f8fafc"))
+	_text_fit(status_msg, foot_box.position + Vector2(18, 30), 1196.0, 16, Color("a7f3d0") if status_good else Color("f8fafc"))
