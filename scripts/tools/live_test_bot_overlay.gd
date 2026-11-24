@@ -448,7 +448,10 @@ func _walk_to_terminal_and_enter_stage(world: Node, target_cat: String, stage_id
 		_set_live_status("[%s 섬] 컴퓨터 도착 · 모니터 접속(E)" % cat_kor, "💻 [E] 컴퓨터 접속 -> [%s] 화면으로 줌인합니다..." % target_title)
 		if not await _wait_sec(0.55, token):
 			return false
-		await world._open_computer_game()
+		# GM-9: if the world already left the scene tree (the robot walked into the computer and the
+		# game switched to the 2D menu), its camera tween never runs and this await never returned.
+		if _world_in_tree(world):
+			await world._open_computer_game()
 		_active_2d_category = target_cat
 		await get_tree().process_frame
 		await get_tree().process_frame
@@ -608,9 +611,18 @@ func _run_full_scenario_tour(token: int) -> void:
 
 		# 2) Trigger this island's 3D gimmick & solve 1 quiz question
 		_set_live_status("%s 3D 기믹 및 퀴즈 풀이" % step_prefix, "%s의 3D 학습 장치와 퀴즈를 검증합니다..." % ztitle)
-		world._on_interact()
+		# GM-9: _on_interact() opens the 2D computer menu when the robot stands near a terminal, which
+		# removes the 3D world from the tree; bring the world back before driving it again.
+		if not world.npc_dialog_open() and not _near_computer(world):
+			world._on_interact()
 		if not await _wait_sec(0.65, token):
 			return
+		if not _world_in_tree(world):
+			await _return_to_3d_world()
+			world = get_tree().current_scene
+			if not _world_in_tree(world):
+				stop_bot("3D 월드로 돌아오지 못했습니다.")
+				return
 		world._open_quiz_for_zone(zkey)
 		if not await _wait_sec(1.0, token):
 			return
@@ -650,6 +662,19 @@ func _run_full_scenario_tour(token: int) -> void:
 	is_running = false
 	running_bar.visible = false
 	_show_completion_banner("✅ 7개 섬 전체 순회 및 컴퓨터 미니게임 테스트 봇 플레이가 완료되었습니다!")
+
+func _world_in_tree(world: Node) -> bool:
+	return world != null and is_instance_valid(world) and world.is_inside_tree()
+
+func _near_computer(world: Node) -> bool:
+	if not _world_in_tree(world) or world.player == null or not ("computer_positions" in world):
+		return false
+	var pp: Vector3 = world.player.global_position
+	var reach: float = 3.2  # nodeverse_world.gd COMPUTER_INTERACT_DIST (script constants are not readable via get())
+	for cp in world.computer_positions:
+		if pp.distance_to(cp) < reach:
+			return true
+	return false
 
 func _return_to_3d_world() -> void:
 	_active_2d_category = ""
