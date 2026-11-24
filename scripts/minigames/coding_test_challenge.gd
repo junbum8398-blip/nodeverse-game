@@ -390,49 +390,50 @@ func _draw() -> void:
 	button(Rect2(1052, 24, 188, 42), "3D 월드로 복귀", "world", true, 16, Color("2d6a4f"))
 
 	# 1. 좌상단: 주어진 입력 (Input) vs 우상단: 만들어야 할 목표 결과 (Target Output)
-	var in_box := Rect2(24, 88, 444, 108)
+	var in_box := Rect2(24, 84, 444, 78)
 	pbox(in_box, Color("16213a"), Color("475569"))
-	text("📥 주어진 입력 데이터 (Input)", in_box.position + Vector2(16, 28), 17, Color("93c5fd"))
-	draw_string(code_font, in_box.position + Vector2(16, 68), str(lv.input_label), HORIZONTAL_ALIGNMENT_LEFT, 412, 17, Color("f8fafc"))
+	text("📥 주어진 입력 데이터 (Input)", in_box.position + Vector2(16, 25), 16, Color("93c5fd"))
+	draw_string(code_font, in_box.position + Vector2(16, 56), str(lv.input_label), HORIZONTAL_ALIGNMENT_LEFT, 412, 16, Color("f8fafc"))
 
-	var target_box := Rect2(480, 88, 444, 108)
+	var target_box := Rect2(480, 84, 444, 78)
 	pbox(target_box, Color("132a24"), Color("34d399"))
-	text("🎯 만들어야 할 목표 결과 (Target Output)", target_box.position + Vector2(16, 28), 17, Color("6ee7b7"))
-	draw_string(code_font, target_box.position + Vector2(16, 68), "▶ " + str(lv.target_output), HORIZONTAL_ALIGNMENT_LEFT, 412, 18, Color("a7f3d0"))
+	text("🎯 만들어야 할 목표 결과 (Target Output)", target_box.position + Vector2(16, 25), 16, Color("6ee7b7"))
+	draw_string(code_font, target_box.position + Vector2(16, 56), "▶ " + str(lv.target_output), HORIZONTAL_ALIGNMENT_LEFT, 412, 17, Color("a7f3d0"))
 
-	# 2. 중앙 코드 에디터 (직접 키보드 타이핑 + 단어 조각 클릭 모두 가능)
-	var ed_box := Rect2(24, 206, 900, 210)
+	# 2. 중앙 코드 에디터 (직접 키보드 타이핑 + 단어 조각 클릭 모두 가능, 8줄 이상 여유롭게 표시)
+	var ed_box := Rect2(24, 170, 900, 258)
 	pbox(ed_box, Color("0b111e"), Color("60a5fa"))
-	text("⌨️ 코드 에디터 — 키보드로 직접 타이핑하거나 아래 단어 조각을 클릭해 빈칸을 완성하세요!", ed_box.position + Vector2(16, 26), 15, Color("93c5fd"))
+	text("⌨️ 코드 에디터 — 키보드로 직접 타이핑하거나 아래 단어 조각을 클릭해 빈칸을 완성하세요!", ed_box.position + Vector2(16, 24), 15, Color("93c5fd"))
 
-	var y := ed_box.position.y + 56.0
+	var y := ed_box.position.y + 52.0
+	var line_step := 24.0
 	var line_no := 1
 	for ln: String in lv.code_before:
-		draw_string(code_font, Vector2(ed_box.position.x + 18, y), "%d | %s" % [line_no, ln], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("cbd5e1"))
-		y += 28.0
+		draw_string(code_font, Vector2(ed_box.position.x + 18, y), "%d | %s" % [line_no, ln], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("cbd5e1"))
+		y += line_step
 		line_no += 1
 
 	# 플레이어가 타이핑하는 핵심 줄 하이라이트
-	var input_line_rect := Rect2(ed_box.position.x + 14, y - 20, ed_box.size.x - 28, 32)
+	var input_line_rect := Rect2(ed_box.position.x + 14, y - 18, ed_box.size.x - 28, 26)
 	draw_rect(input_line_rect, Color(0.22, 0.38, 0.68, 0.35))
 	draw_rect(input_line_rect, Color("fbbf24"), false, 2.0)
 	var cursor_str := "▌" if int(time * 2.5) % 2 == 0 and phase == "play" else ""
 	var active_line := "%d | %s%s%s%s" % [line_no, str(lv.code_prefix), typed_code, cursor_str, str(lv.code_suffix)]
-	draw_string(code_font, Vector2(ed_box.position.x + 18, y), active_line, HORIZONTAL_ALIGNMENT_LEFT, ed_box.size.x - 36, 19, Color("fde047"))
-	y += 30.0
+	draw_string(code_font, Vector2(ed_box.position.x + 18, y), active_line, HORIZONTAL_ALIGNMENT_LEFT, ed_box.size.x - 36, 18, Color("fde047"))
+	y += line_step + 2.0
 	line_no += 1
 
 	for ln2: String in lv.code_after:
-		draw_string(code_font, Vector2(ed_box.position.x + 18, y), "%d | %s" % [line_no, ln2], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("cbd5e1"))
-		y += 28.0
+		draw_string(code_font, Vector2(ed_box.position.x + 18, y), "%d | %s" % [line_no, ln2], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("cbd5e1"))
+		y += line_step
 		line_no += 1
 
 	# 3. 단어 조각 조립 트레이 (클릭 한 번으로 코드 입력)
-	var tok_box := Rect2(24, 424, 900, 96)
+	var tok_box := Rect2(24, 434, 900, 90)
 	pbox(tok_box, Color("151f36"), Color("475569"))
-	text("🧩 단어 조각 클릭으로 조립 (직접 키보드 타이핑도 가능!):", tok_box.position + Vector2(16, 25), 15, Color("cbd5e1"))
+	text("🧩 단어 조각 클릭으로 조립 (직접 키보드 타이핑도 가능!):", tok_box.position + Vector2(16, 23), 15, Color("cbd5e1"))
 	var tx := tok_box.position.x + 16.0
-	var ty := tok_box.position.y + 38.0
+	var ty := tok_box.position.y + 34.0
 	for tok: String in lv.tokens:
 		var bw := maxf(float(tok.length()) * 13.0 + 30.0, 68.0)
 		button(Rect2(tx, ty, bw, 42), tok, "tok:" + tok, phase == "play", 17, Color("1e3a5f"))
@@ -443,25 +444,25 @@ func _draw() -> void:
 	# 4. 실시간 내 코드 출력 비교 콘솔 (Live Output vs Target Output)
 	var ev := _evaluate_live_output()
 	var matched: bool = ev.get("matched", false)
-	var out_box := Rect2(24, 528, 900, 118)
+	var out_box := Rect2(24, 530, 900, 116)
 	pbox(out_box, Color("0f291e") if matched else Color("1c1926"), Color("34d399") if matched else Color("f59e0b"))
-	text("⚡ 내 코드의 실시간 출력 (Live Output) — 위쪽 [🎯 목표 결과]와 비교해 보세요!", out_box.position + Vector2(16, 28), 16, Color("6ee7b7") if matched else Color("fcd34d"))
-	draw_string(code_font, out_box.position + Vector2(16, 64), "▶ " + str(ev.get("output", "")), HORIZONTAL_ALIGNMENT_LEFT, 680, 19, Color("a7f3d0") if matched else Color("fef08a"))
-	text(str(ev.get("note", "")), out_box.position + Vector2(16, 98), 15, Color("86efac") if matched else Color("cbd5e1"))
+	text("⚡ 내 코드의 실시간 출력 (Live Output) — 위쪽 [🎯 목표 결과]와 비교해 보세요!", out_box.position + Vector2(16, 26), 16, Color("6ee7b7") if matched else Color("fcd34d"))
+	draw_string(code_font, out_box.position + Vector2(16, 62), "▶ " + str(ev.get("output", "")), HORIZONTAL_ALIGNMENT_LEFT, 680, 18, Color("a7f3d0") if matched else Color("fef08a"))
+	text(str(ev.get("note", "")), out_box.position + Vector2(16, 96), 15, Color("86efac") if matched else Color("cbd5e1"))
 
 	var sub_lbl := "▶ 다음 단계로 (Enter)" if phase == "solved" else ("🏆 코딩테스트 완료!" if phase == "all_cleared" else "▶ 채점 & 제출 (Enter)")
-	button(Rect2(out_box.end.x - 216, out_box.position.y + 34, 198, 56), sub_lbl, "submit", true, 18, Color("059669") if (matched or phase != "play") else Color("2563eb"))
+	button(Rect2(out_box.end.x - 216, out_box.position.y + 32, 198, 56), sub_lbl, "submit", true, 18, Color("059669") if (matched or phase != "play") else Color("2563eb"))
 
 	# 5. 우측 전용 코딩 로봇 데스크 (글씨를 절대 가리지 않는 독립 코너 + 타자 애니메이션)
-	var desk_box := Rect2(936, 88, 320, 558)
+	var desk_box := Rect2(936, 84, 320, 562)
 	pbox(desk_box, Color("131c31"), Color("38bdf8"))
-	text("🤖 코딩 파트너 로봇", desk_box.position + Vector2(20, 32), 19, Color("7dd3fc"))
-	text("타자를 칠 때마다 함께 코딩해요!", desk_box.position + Vector2(20, 56), 14, Color("94a3b8"))
+	text("🤖 코딩 파트너 로봇", desk_box.position + Vector2(20, 30), 19, Color("7dd3fc"))
+	text("타자를 칠 때마다 함께 코딩해요!", desk_box.position + Vector2(20, 52), 14, Color("94a3b8"))
 
-	# 로봇 말풍선
-	var bubble_rect := Rect2(954, 78, 284, 78)
+	# 로봇 말풍선 (헤더 아래에 깔끔하게 배치)
+	var bubble_rect := Rect2(954, 148, 284, 68)
 	pbox(bubble_rect, Color("fffbeb"), Color("f59e0b"))
-	text_c(robot_bubble, bubble_rect.get_center() + Vector2(0, 6), 15, Color("1e293b"))
+	text_c(robot_bubble, bubble_rect.get_center() + Vector2(0, 5), 14, Color("1e293b"))
 
 	# 로봇 책상과 미니 노트북 그림
 	var table_rect := Rect2(968, 356, 256, 22)
