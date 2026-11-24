@@ -28,10 +28,10 @@ static var saved_cam_yaw: float = 45.0
 # 7 ISLANDS CONFIGURATION (WorldTerrain - Organic Beveled Lego Style)
 # ============================================================================
 const ISLANDS := {
-	"MAIN": {"center": Vector2(0.0, 5.3), "rx": 7.4, "rz": 6.3, "rects": [Rect2(-2.5, -2.6, 5.0, 4.0)], "seed": 3},
-	"DS": {"center": Vector2(-15.5, -1.0), "rx": 7.0, "rz": 6.5, "rects": [], "seed": 7},
+	"MAIN": {"center": Vector2(0.0, 5.3), "rx": 7.4, "rz": 6.3, "rects": [Rect2(-2.5, -2.6, 5.0, 4.0), Rect2(-5.0, -1.0, 10.0, 2.0)], "seed": 3},
+	"DS": {"center": Vector2(-15.5, -1.0), "rx": 7.0, "rz": 6.5, "rects": [Rect2(-9.0, -1.0, 1.0, 2.0)], "seed": 7},
 	"ALGO": {"center": Vector2(0.0, -14.0), "rx": 9.5, "rz": 5.6, "rects": [], "seed": 11},
-	"SQL": {"center": Vector2(15.5, -1.0), "rx": 7.0, "rz": 6.5, "rects": [], "seed": 13},
+	"SQL": {"center": Vector2(15.5, -1.0), "rx": 7.0, "rz": 6.5, "rects": [Rect2(8.0, -1.0, 1.0, 2.0)], "seed": 13},
 	"INTRO": {"center": Vector2(-17.5, 17.5), "rx": 6.8, "rz": 5.8, "rects": [], "seed": 17},
 	"DATA": {"center": Vector2(23.0, -17.5), "rx": 7.2, "rz": 6.0, "rects": [], "seed": 19},
 	"CHALLENGE": {"center": Vector2(0.0, -32.5), "rx": 8.5, "rz": 6.5, "rects": [], "seed": 23}
@@ -832,6 +832,38 @@ func _edge_point(from: Vector2, dir: Vector2) -> Vector2:
 		p = nx
 	return p
 
+func _bridge_end(from: Vector2, dir: Vector2, width: float = 1.8, embed: float = 0.4) -> Vector2:
+	var d := dir.normalized()
+	var perp := Vector2(-d.y, d.x)
+	var center_edge := from
+	var full_edge := from
+	var has_full := false
+	for i in range(400):
+		var nx := from + d * (float(i) * 0.05)
+		if not _on_island(nx):
+			break
+		center_edge = nx
+		var all_on := true
+		for s: float in [-0.5, -0.25, 0.0, 0.25, 0.5]:
+			if not _on_island(nx + perp * (width * s)):
+				all_on = false
+				break
+		if all_on:
+			full_edge = nx
+			has_full = true
+	var edge := full_edge if has_full else center_edge
+	return edge - d * embed
+
+func _add_bridge_connected(bname: String, from_a: Vector2, dir_a: Vector2, from_b: Vector2, dir_b: Vector2, width: float) -> void:
+	var a := _bridge_end(from_a, dir_a, width, 0.4)
+	var b := _bridge_end(from_b, dir_b, width, 0.4)
+	WorldTerrain.arch_bridge(self, bname, a, b, width, TOP)
+	var seg_dir := (b - a).normalized()
+	_reserve(a, width * 0.85)
+	_reserve(a - seg_dir * 1.1, width * 0.85)
+	_reserve(b, width * 0.85)
+	_reserve(b + seg_dir * 1.1, width * 0.85)
+
 func _label3d(text: String, pos: Vector3, size: int = 40, color: Color = Color(1, 1, 1)) -> Label3D:
 	var l := Label3D.new()
 	l.text = text
@@ -957,39 +989,25 @@ func _build_islands() -> void:
 
 func _build_bridges() -> void:
 	# Main <-> DS (West)
-	var main_w := _edge_point(Vector2(0.0, 0.0), Vector2(-1.0, 0.0))
-	var ds_e := _edge_point(Vector2(-15.5, 0.0), Vector2(1.0, 0.0))
-	WorldTerrain.arch_bridge(self, "Bridge_DS", main_w + Vector2(0.4, 0.0), ds_e - Vector2(0.4, 0.0), 1.8, TOP)
+	_add_bridge_connected("Bridge_DS", Vector2(0.0, 0.0), Vector2(-1.0, 0.0), Vector2(-15.5, 0.0), Vector2(1.0, 0.0), 1.8)
 
 	# Main <-> SQL (East)
-	var main_e := _edge_point(Vector2(0.0, 0.0), Vector2(1.0, 0.0))
-	var sql_w := _edge_point(Vector2(15.5, 0.0), Vector2(-1.0, 0.0))
-	WorldTerrain.arch_bridge(self, "Bridge_SQL", main_e - Vector2(0.4, 0.0), sql_w + Vector2(0.4, 0.0), 1.8, TOP)
+	_add_bridge_connected("Bridge_SQL", Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(15.5, 0.0), Vector2(-1.0, 0.0), 1.8)
 
 	# Main <-> ALGO (North)
-	var main_n := _edge_point(Vector2(0.0, 0.0), Vector2(0.0, -1.0))
-	var algo_s := _edge_point(Vector2(0.0, -14.0), Vector2(0.0, 1.0))
-	WorldTerrain.arch_bridge(self, "Bridge_ALGO", main_n + Vector2(0.0, 0.4), algo_s - Vector2(0.0, 0.4), 1.8, TOP)
+	_add_bridge_connected("Bridge_ALGO", Vector2(0.0, 0.0), Vector2(0.0, -1.0), Vector2(0.0, -14.0), Vector2(0.0, 1.0), 1.8)
 
 	# Main <-> INTRO (South-West)
-	var main_sw := _edge_point(Vector2(0.0, 5.3), Vector2(-1.0, 1.0))
-	var intro_ne := _edge_point(Vector2(-17.5, 17.5), Vector2(1.0, -1.0))
-	WorldTerrain.arch_bridge(self, "Bridge_INTRO", main_sw, intro_ne, 1.8, TOP)
+	_add_bridge_connected("Bridge_INTRO", Vector2(0.0, 5.3), Vector2(-1.0, 1.0), Vector2(-17.5, 17.5), Vector2(1.0, -1.0), 1.8)
 
 	# ALGO <-> CHALLENGE (Far North)
-	var algo_n := _edge_point(Vector2(0.0, -14.0), Vector2(0.0, -1.0))
-	var chal_s := _edge_point(Vector2(0.0, -32.5), Vector2(0.0, 1.0))
-	WorldTerrain.arch_bridge(self, "Bridge_CHALLENGE", algo_n + Vector2(0.0, -0.4), chal_s + Vector2(0.0, 0.4), 2.2, TOP)
+	_add_bridge_connected("Bridge_CHALLENGE", Vector2(0.0, -14.0), Vector2(0.0, -1.0), Vector2(0.0, -32.5), Vector2(0.0, 1.0), 2.2)
 
 	# ALGO <-> DATA (North-East)
-	var algo_e := _edge_point(Vector2(0.0, -14.0), Vector2(1.0, -0.3))
-	var data_w := _edge_point(Vector2(23.0, -17.5), Vector2(-1.0, 0.3))
-	WorldTerrain.arch_bridge(self, "Bridge_DATA_ALGO", algo_e, data_w, 1.8, TOP)
+	_add_bridge_connected("Bridge_DATA_ALGO", Vector2(0.0, -14.0), Vector2(1.0, -0.3), Vector2(23.0, -17.5), Vector2(-1.0, 0.3), 1.8)
 
 	# SQL <-> DATA
-	var sql_n := _edge_point(Vector2(15.5, -1.0), Vector2(0.6, -1.0))
-	var data_s := _edge_point(Vector2(23.0, -17.5), Vector2(-0.6, 1.0))
-	WorldTerrain.arch_bridge(self, "Bridge_DATA_SQL", sql_n, data_s, 1.8, TOP)
+	_add_bridge_connected("Bridge_DATA_SQL", Vector2(15.5, -1.0), Vector2(0.6, -1.0), Vector2(23.0, -17.5), Vector2(-0.6, 1.0), 1.8)
 
 
 # ============================================================================
