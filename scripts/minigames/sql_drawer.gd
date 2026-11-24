@@ -820,141 +820,84 @@ func _tool_sql_role(id: String) -> String:
 		"compare": "비교 붓 (WHERE 서브쿼리 비교)"
 	}.get(id, id)
 
-## 초보자가 지금 무엇을 어느 열에 찍어야 하는지 단계별로 안내하고 추천 열 이름을 반환한다.
-func _next_step_guide() -> Dictionary:
-	var t := _target_model()
+## 정답(어느 열/어떤 값인지)은 절대 알려주지 않고, 현재 선택한 도구의 작동 방식과 게임 진행 규칙만 안내한다.
+func _tool_howto_guide() -> Dictionary:
 	if phase == "solved":
-		return {"step": "✅ 정답 완료!", "msg": "미션 성공! [Enter 키] 또는 화면을 클릭하면 다음 단계로 넘어갑니다.", "col": "", "side": "left"}
-	if activity == "query":
-		for req_col: String in t.select:
-			if not m.select.has(req_col):
-				var slot_hint := "① 우측 하단 [1 열 붓] 선택 후 " if tool_id != "col" else "👉 "
-				return {
-					"step": "1단계: 뽑을 열(SELECT) 색칠하기",
-					"msg": "%s표의 '%s' 세로 열(아무 칸이나)을 클릭하거나 WASD로 이동해 [E]를 누르세요!" % [slot_hint, req_col],
-					"col": req_col, "side": "left"
-				}
-		if t.cond != null and (m.cond == null or m.cond.col != t.cond.col or m.cond.op != t.cond.op or m.cond.val != t.cond.val):
-			return {
-				"step": "2단계: 조건(WHERE) 걸기",
-				"msg": "우측 하단 [2 조건 붓]을 고른 뒤, '%s' 열을 클릭(또는 E)해 '%s %s' 조건을 맞추세요!" % [t.cond.col, t.cond.op, str(t.cond.val)],
-				"col": str(t.cond.col), "side": "left"
-			}
-		if t.order != null and (m.order == null or m.order.col != t.order.col or m.order.dir != t.order.dir):
-			return {
-				"step": "3단계: 줄 세우기(ORDER BY)",
-				"msg": "우측 하단 [4 정렬] 도구를 고른 뒤, '%s' 열을 클릭(또는 E)해 내림차순(DESC)으로 정렬하세요!" % t.order.col,
-				"col": str(t.order.col), "side": "left"
-			}
-		if t.limit > 0 and m.limit != t.limit:
-			return {
-				"step": "4단계: 개수 자르기(LIMIT)",
-				"msg": "우측 하단 [5 개수] 도구를 고른 뒤, 아무 칸이나 클릭(또는 E)해 %d명만 남기세요!" % t.limit,
-				"col": str(t.order.col) if t.order != null else "score", "side": "left"
-			}
-	elif activity == "group":
-		if m.group != t.group:
-			return {
-				"step": "1단계: 같은 값끼리 묶기(GROUP BY)",
-				"msg": "[1 그룹 붓]으로 표의 '%s'(부서) 열을 클릭(또는 WASD 이동 후 E)해 같은 부서끼리 묶으세요!" % t.group,
-				"col": str(t.group), "side": "left"
-			}
-		var mine: Array = m.aggs.map(func(a): return Model.agg_label(a))
-		for req_agg: Dictionary in t.aggs:
-			var lbl := Model.agg_label(req_agg)
-			if not mine.has(lbl):
-				if req_agg.fn == "COUNT" and req_agg.col == "*":
-					return {"step": "2단계: 그룹별 인원 세기(COUNT(*))", "msg": "우측 하단 [2 전체 건수] 도구를 고르고 표의 아무 칸이나 클릭(또는 E)하세요!", "col": "dept", "side": "left"}
-				elif req_agg.fn == "COUNT":
-					return {"step": "2단계: 값 있는 칸만 세기(COUNT(score))", "msg": "우측 하단 [4 값 있는 수] 도구를 고르고 '%s' 열을 클릭(또는 E)하세요!" % req_agg.col, "col": str(req_agg.col), "side": "left"}
-				elif req_agg.fn == "AVG":
-					return {"step": "2단계: 그룹별 평균 구하기(AVG)", "msg": "우측 하단 [5 평균] 도구를 고르고 '%s' 열을 클릭(또는 E)하세요!" % req_agg.col, "col": str(req_agg.col), "side": "left"}
-		if t.having != null and (m.having == null or m.having.op != t.having.op or m.having.val != t.having.val):
-			return {
-				"step": "3단계: 묶은 요약에 조건 걸기(HAVING)",
-				"msg": "우측 하단 [6 조건 붓]을 고른 뒤, 표 아래쪽 [요약 서랍 박스(개발/디자인/기획)]를 클릭(또는 S키로 맨 아래 이동 후 E)하세요!",
-				"col": "__summary__", "side": "left"
-			}
-	elif activity == "join":
-		if m.lk != t.lk:
-			return {
-				"step": "1단계: 왼쪽 표 연결 열(ON) 찍기",
-				"msg": "[1 키 붓]으로 왼쪽 표(students)에서 부서 번호가 들어 있는 '%s' 열을 클릭(또는 E)하세요!" % t.lk,
-				"col": str(t.lk), "side": "left"
-			}
-		if m.rk != t.rk:
-			return {
-				"step": "2단계: 오른쪽 표 연결 열(ON) 찍기",
-				"msg": "[1 키 붓]으로 오른쪽 표(%s)에서 같은 번호가 들어 있는 '%s' 열을 클릭(또는 D키로 이동 후 E)하세요!" % [tables.right.name, t.rk],
-				"col": str(t.rk), "side": "right"
-			}
-		if m.join != t.join:
-			return {
-				"step": "3단계: 연결 방식(INNER / LEFT JOIN) 전환",
-				"msg": "우측 하단 [2 처리 방식] 도구를 고르고 표를 클릭(또는 E)해 '%s JOIN'으로 바꾸세요!" % t.join,
-				"col": str(t.lk), "side": "left"
-			}
-	elif activity == "sub":
-		if m.inner == null or m.inner.fn != t.inner.fn or m.inner.col != t.inner.col:
-			var tname := "[1 평균]" if t.inner.fn == "AVG" else "[1 최댓값]"
-			return {
-				"step": "1단계: 안쪽 계산 토큰(서브쿼리) 만들기",
-				"msg": "우측 하단 %s 도구를 고른 상태로 '%s' 열을 클릭(또는 E)해 계산 토큰을 먼저 만드세요!" % [tname, t.inner.col],
-				"col": str(t.inner.col), "side": "left"
-			}
-		if t.outer_op != "" and (m.outer_op != t.outer_op or m.outer_col != t.outer_col):
-			return {
-				"step": "2단계: 계산 토큰과 비교하기(WHERE 서브쿼리)",
-				"msg": "우측 하단 [2 비교 붓]을 고른 뒤, '%s' 열을 클릭(또는 E)해 '%s' 기호를 적용하세요!" % [t.outer_col, t.outer_op],
-				"col": str(t.outer_col), "side": "left"
-			}
-		for req_col: String in t.select:
-			if not m.select.has(req_col):
-				return {
-					"step": "3단계: 출력할 열(SELECT) 고르기",
-					"msg": "우측 하단 [4 열 붓]을 고른 뒤, 표의 '%s' 열을 클릭(또는 E)해 출력 열을 선택하세요!" % req_col,
-					"col": req_col, "side": "left"
-				}
-	return {
-		"step": "✅ SQL 완성! 이제 제출하세요",
-		"msg": "오른쪽 LIVE SQL과 아래 결과 표가 미션과 일치합니다! [Enter 키] 또는 우측 하단 [Enter 제출] 버튼을 클릭하세요!",
-		"col": "", "side": "left"
+		return {
+			"title": "✅ 미션 클리어!",
+			"msg": "정답입니다! [Enter 키] 또는 화면을 클릭하면 다음 단계로 넘어갑니다."
+		}
+	var howto: Dictionary = {
+		"col": {
+			"title": "🖌️ [열 붓 · SELECT] 작동법",
+			"msg": "원하는 세로줄(열)의 아무 칸에서나 [E] 또는 클릭하면 그 세로줄 전체가 선택됩니다. 오른쪽 결과 표를 보며 다 골랐다면 [Enter 제출]!"
+		},
+		"cond": {
+			"title": "🔍 [조건 붓 · WHERE] 작동법",
+			"msg": "조건으로 걸러낼 세로줄(열)에서 [E] 또는 클릭하세요. 숫자 열은 비교 기호 창이 열리고, 문자 열은 그 칸의 값과 일치하는 행만 남깁니다."
+		},
+		"erase": {
+			"title": "🧽 [지우개] 작동법",
+			"msg": "잘못 칠한 세로줄(열)에서 [E] 또는 클릭하면 해당 열에 적용된 선택이나 조건을 지웁니다."
+		},
+		"order": {
+			"title": "↕️ [정렬 · ORDER BY] 작동법",
+			"msg": "줄을 세울 기준 세로줄(열)에서 [E] 또는 클릭할 때마다 내림차순(큰 값부터·DESC) → 오름차순(작은 값부터·ASC) → 해제로 바뀝니다."
+		},
+		"limit": {
+			"title": "✂️ [개수 · LIMIT] 작동법",
+			"msg": "먼저 [정렬] 도구로 줄을 세운 뒤, [E] 또는 클릭할 때마다 위에서부터 남길 인원수(1명 → 2명 → 3명)가 바뀝니다."
+		},
+		"group": {
+			"title": "🗂️ [그룹 붓 · GROUP BY] 작동법",
+			"msg": "같은 값끼리 묶고 싶은 기준 세로줄(열)에서 [E] 또는 클릭하면 같은 값끼리 색깔별로 묶이고 아래에 요약 서랍이 생성됩니다."
+		},
+		"count": {
+			"title": "🔢 [전체 건수 · COUNT(*)] 작동법",
+			"msg": "그룹으로 묶은 뒤 표에서 [E] 또는 클릭하면 각 그룹에 속한 전체 행의 개수를 요약 서랍과 결과 표에 추가합니다."
+		},
+		"countcol": {
+			"title": "🔢 [값 있는 수 · COUNT(열)] 작동법",
+			"msg": "원하는 세로줄(열)에서 [E] 또는 클릭하면 빈칸(NULL)을 제외하고 실제로 값이 들어 있는 칸의 개수만 셉니다."
+		},
+		"avg": {
+			"title": "📊 [평균 · AVG] 작동법",
+			"msg": "평균을 계산할 숫자 세로줄(열)에서 [E] 또는 클릭하면 빈칸(NULL)을 제외한 평균값을 계산합니다."
+		},
+		"having": {
+			"title": "🔍 [그룹 조건 · HAVING] 작동법",
+			"msg": "그룹과 집계 계산을 만든 뒤, 표 아래쪽에 생긴 [요약 서랍 박스]로 내려가서(S키 또는 클릭) [E]를 누르면 그룹 조건 창이 열립니다."
+		},
+		"key": {
+			"title": "🔗 [키 붓 · JOIN ON] 작동법",
+			"msg": "왼쪽 표에서 연결 기준이 될 세로줄(열)을 한 번 찍고, 이어서 오른쪽 표에서 짝이 되는 세로줄(열)을 찍으면 같은 값끼리 연결됩니다."
+		},
+		"mode": {
+			"title": "🔄 [처리 방식 · JOIN 종류] 작동법",
+			"msg": "[E] 또는 클릭할 때마다 짝이 맞는 행만 남기는 INNER JOIN과 왼쪽 표의 모든 행을 남기는 LEFT JOIN으로 전환됩니다."
+		},
+		"max": {
+			"title": "🏆 [최댓값 · MAX] 작동법",
+			"msg": "가장 큰 값을 찾을 숫자 세로줄(열)에서 [E] 또는 클릭하면 화면 아래쪽에 계산 결과 토큰(안쪽 쿼리 값)이 만들어집니다."
+		},
+		"compare": {
+			"title": "⚖️ [비교 붓 · 서브쿼리 비교] 작동법",
+			"msg": "먼저 계산 도구로 아래쪽에 토큰을 만든 뒤, 비교할 숫자 세로줄(열)에서 [E] 또는 클릭해 토큰과의 비교 기호(>, = 등)를 고릅니다."
+		}
 	}
+	return howto.get(tool_id, {
+		"title": "🎮 플레이 방법",
+		"msg": "우측 하단에서 도구를 고르고 원하는 세로줄(열)에서 [E] 또는 클릭해 칠하세요. 오른쪽 결과가 미션과 맞으면 [Enter 제출]!"
+	})
 
 func _draw_step_guide() -> void:
-	var guide := _next_step_guide()
-	var is_ready: bool = str(guide.get("col", "")) == ""
+	var guide := _tool_howto_guide()
+	var is_solved: bool = phase == "solved"
 	var bar := Rect2(80, 644, 736, 42) if activity != "join" else Rect2(80, 644, 836, 42)
-	draw_rect(bar, Color(0.08, 0.22, 0.14, 0.94) if is_ready else Color(0.09, 0.16, 0.32, 0.94))
-	draw_rect(bar, Color("7ddc8a") if is_ready else GOLD, false, 2.0)
-	var step_lbl: String = "[" + str(guide.get("step", "")) + "] "
-	var full_msg: String = step_lbl + str(guide.get("msg", ""))
-	text_at(bar.get_center(), full_msg, fit(full_msg, bar.size.x - 24, 15), Color("a8ffbe") if is_ready else Color("fff4c2"))
-
-	# 추천 대상 열 머리글(또는 요약 서랍) 위에 직관적인 '▼ 여기 클릭/E' 배지 표시
-	var target_col: String = str(guide.get("col", ""))
-	var target_side: String = str(guide.get("side", "left"))
-	if target_col == "__summary__" and activity == "group" and not res.groups.is_empty():
-		var sr := summary_rect(0)
-		var badge := Rect2(sr.position.x, sr.position.y - 26, 210, 24)
-		draw_rect(badge, GOLD)
-		draw_rect(badge, INK, false, 2.0)
-		text_at(badge.get_center(), "▼ 아래 요약 서랍 클릭 또는 [S]+[E]", 13, INK)
-	elif target_col != "":
-		var col_idx := -1
-		if activity == "join" and target_side == "right":
-			var ri: int = tables.right.cols.find(target_col)
-			if ri >= 0:
-				col_idx = 5 + ri
-		else:
-			col_idx = tables.left.cols.find(target_col)
-		if col_idx >= 0:
-			var top_c := cell_rect(0, col_idx)
-			var badge_w := maxf(top_c.size.x - 4, 82.0)
-			var badge := Rect2(top_c.get_center().x - badge_w * 0.5, top_c.position.y - 72, badge_w, 24)
-			draw_rect(badge, GOLD)
-			draw_rect(badge, INK, false, 2.0)
-			text_at(badge.get_center(), "▼ 여기 클릭/E", fit("▼ 여기 클릭/E", badge_w - 8, 13), INK)
+	draw_rect(bar, Color(0.08, 0.22, 0.14, 0.94) if is_solved else Color(0.09, 0.16, 0.32, 0.94))
+	draw_rect(bar, Color("7ddc8a") if is_solved else GOLD, false, 2.0)
+	var full_msg: String = str(guide.get("title", "")) + " — " + str(guide.get("msg", ""))
+	text_at(bar.get_center(), full_msg, fit(full_msg, bar.size.x - 24, 15), Color("a8ffbe") if is_solved else Color("fff4c2"))
 
 func _is_col_selected(col: String) -> bool:
 	return m.select.has(col)
@@ -1295,30 +1238,30 @@ func _draw_help() -> void:
 	text_at(box.get_center() + Vector2(0, -195), "🎮 " + game.title + " — 어떻게 플레이하나요?", 28, NAVY)
 	var stage_steps: Array = {
 		"query": [
-			"• [이 게임의 목표] 학생 표에서 미션이 요구하는 세로 열(name, score 등)만 골라내고 조건으로 거르는 게임입니다.",
-			"• [1단계] 우측 하단 도구함에서 [1 열 붓]을 고른 뒤, 표에서 뽑을 세로 열(예: name, score)을 클릭(또는 WASD+E)하세요!",
-			"• [2·3단계] 조건이 필요하면 [2 조건 붓]으로 바꾸고 score 열을 클릭해 점수 조건(>= 80 등)을 맞춘 뒤 [Enter 제출]!"
+			"• [열 붓 (SELECT)] 표에서 결과로 꺼내고 싶은 세로줄(열)에 찍으면 그 열 전체가 선택됩니다.",
+			"• [조건 붓 (WHERE)] 특정 조건을 만족하는 행만 남기고 싶을 때 기준 세로줄(열)에 찍어 조건을 설정합니다.",
+			"• [정렬 / 개수] 기준 세로줄에 [정렬]을 찍어 순서를 세우고, [개수]로 상위 몇 줄만 남길지 정합니다."
 		],
 		"group": [
-			"• [이 게임의 목표] 같은 부서(dept)끼리 색깔별로 묶고(GROUP BY), 인원수나 평균 점수를 집계하는 게임입니다.",
-			"• [1단계] 먼저 [1 그룹 붓]으로 'dept' 열을 클릭(또는 E)해 같은 부서끼리 한 그룹으로 묶으세요!",
-			"• [2·3단계] [2 전체 건수]·[5 평균] 도구로 통계를 추가하고, 3단계에서는 아래쪽 [요약 서랍 박스]에 [6 조건 붓]을 찍으세요!"
+			"• [그룹 붓 (GROUP BY)] 같은 값끼리 묶을 기준 세로줄(열)에 찍으면 색깔별로 그룹이 묶이고 아래에 요약 서랍이 생깁니다.",
+			"• [건수 / 평균 도구] 그룹을 묶은 뒤 집계 도구로 각 그룹의 행 개수(COUNT)나 숫자 열의 평균(AVG)을 추가합니다.",
+			"• [조건 붓 (HAVING)] 묶인 그룹 자체를 조건으로 거를 때는 표 아래쪽 [요약 서랍 박스]로 내려가서 조건 붓을 찍습니다."
 		],
 		"join": [
-			"• [이 게임의 목표] 왼쪽 학생 표와 오른쪽 부서/프로젝트 표에서 같은 번호(키)가 담긴 열끼리 선으로 잇는 게임입니다.",
-			"• [1단계] [1 키 붓]으로 왼쪽 표의 'dept_id' 열을 클릭(또는 E)하고, 이어서 오른쪽 표의 연결 열('id' 또는 'dept_id')을 클릭하세요!",
-			"• [2단계] 부서가 없는 학생도 남겨야 할 때는 [2 처리 방식] 도구를 골라 클릭(또는 E)해 'LEFT JOIN'으로 전환하세요!"
+			"• [키 붓 (JOIN ON)] 두 표를 이어 줄 연결 도장입니다. 왼쪽 표의 연결 열에 한 번, 오른쪽 표의 연결 열에 한 번 찍습니다.",
+			"• [연결 확인] 양쪽 열의 값이 같은 행끼리 색깔 선으로 이어지며 오른쪽 결과 표에 합쳐진 명단이 나타납니다.",
+			"• [처리 방식] 짝이 있는 행만 남기는 INNER JOIN과 왼쪽 표의 모든 행을 남기는 LEFT JOIN을 전환할 수 있습니다."
 		],
 		"sub": [
-			"• [이 게임의 목표] 먼저 평균·최댓값 계산 토큰(안쪽 SELECT)을 만든 뒤, 그 토큰과 학생 점수를 비교하는 게임입니다.",
-			"• [1단계] [1 평균] 또는 [1 최댓값] 도구로 'score' 열을 클릭(또는 E)해 아래쪽에 초록색 계산 토큰을 만드세요!",
-			"• [2·3단계] [2 비교 붓]으로 'score' 열을 클릭해 토큰과 비교(>, =)하고, [4 열 붓]으로 'name', 'score' 열을 고른 뒤 제출!"
+			"• [평균 / 최댓값 도구] 숫자 세로줄(열)에 찍으면 먼저 계산된 값(안쪽 SELECT 결과)이 화면 아래쪽 토큰으로 만들어집니다.",
+			"• [비교 붓] 아래쪽에 만들어진 계산 토큰과 숫자 열을 비교(>, = 등)하여 조건에 맞는 행만 걸러냅니다.",
+			"• [열 붓 (SELECT)] 마지막으로 결과 표에 출력할 세로줄(열)을 열 붓으로 골라 완성합니다."
 		]
 	}[activity]
 	var common_lines := [
-		"💡 [핵심 원리] 25개 칸을 하나씩 다 칠할 필요가 없어요! 원하는 세로 열(Column)의 아무 칸이나 한 번만 찍으면 그 열 전체에 적용됩니다.",
-		"🖱️ [조작 방법] 마우스로 (우측 하단 도구 클릭 → 표의 세로 열 클릭 → Enter 제출 클릭) 하거나, 키보드 (숫자 1~6 → WASD+E → Enter) 사용!",
-		"👀 [실시간 가이드] 화면 아래쪽 파란 가이드 바와 표 위의 [▼ 여기 클릭/E] 표시가 지금 눌러야 할 곳을 단계별로 알려줍니다."
+		"💡 [핵심 규칙] 25개 칸을 하나씩 칠하는 게 아닙니다! 원하는 세로줄(열)의 아무 칸에서나 한 번만 찍으면 그 세로줄 전체에 적용됩니다.",
+		"🖱️ [조작 방법] 마우스로 (우측 하단 도구 클릭 → 표의 세로줄 클릭 → Enter 제출 클릭) 하거나, 키보드 (숫자 1~6 → WASD+E → Enter) 사용!",
+		"👀 [결과 확인] 붓을 찍을 때마다 오른쪽 LIVE SQL과 아래 결과 표가 즉시 바뀝니다. 상단 미션에 맞는 결과가 나오면 제출하세요!"
 	]
 	var y_off := -135.0
 	for ln: String in common_lines:
